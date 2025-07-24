@@ -7,6 +7,7 @@ const FinalTradingChart = () => {
   const [chartInstance, setChartInstance] = useState<any>(null)
   const [seriesInstance, setSeriesInstance] = useState<any>(null)
   const [isChartReady, setIsChartReady] = useState(false)
+  const [priceLines, setPriceLines] = useState<any[]>([])
   
   const { 
     chartData, 
@@ -117,6 +118,52 @@ const FinalTradingChart = () => {
       }
     }
   }, [seriesInstance, chartData])
+
+  // Add trading lines to chart
+  useEffect(() => {
+    if (!seriesInstance) return
+
+    console.log('Updating trading lines:', tradingLines.length)
+    
+    try {
+      // Remove existing price lines
+      priceLines.forEach(priceLine => {
+        try {
+          seriesInstance.removePriceLine(priceLine)
+        } catch (err) {
+          console.log('Failed to remove price line:', err)
+        }
+      })
+      
+      // Clear the price lines array
+      setPriceLines([])
+      
+      // Add new trading lines
+      if (tradingLines.length > 0) {
+        const newPriceLines: any[] = []
+        
+        tradingLines.forEach(line => {
+          console.log('Creating price line:', line.label, line.price)
+          
+          const priceLine = seriesInstance.createPriceLine({
+            price: line.price,
+            color: line.color,
+            lineWidth: 2,
+            lineStyle: 2, // Dashed line
+            axisLabelVisible: true,
+            title: line.label,
+          })
+          
+          newPriceLines.push(priceLine)
+        })
+        
+        setPriceLines(newPriceLines)
+        console.log('Created', newPriceLines.length, 'price lines')
+      }
+    } catch (error) {
+      console.error('Failed to update trading lines:', error)
+    }
+  }, [seriesInstance, tradingLines])
 
   if (isLoading) {
     return (
