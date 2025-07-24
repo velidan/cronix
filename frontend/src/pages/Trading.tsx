@@ -3,6 +3,7 @@ import { useTradingStore } from '../store/tradingStore'
 import { generateDemoChartData, generatePriceUpdate } from '../utils/chartData'
 import FinalTradingChart from '../components/FinalTradingChart'
 import TradingControls from '../components/TradingControls'
+import BracketOrderForm from '../components/BracketOrderForm'
 
 const Trading = () => {
   const { 
@@ -57,7 +58,8 @@ const Trading = () => {
         </div>
         
         {/* Controls - Takes 1/4 of the width */}
-        <div className="xl:col-span-1">
+        <div className="xl:col-span-1 space-y-6">
+          <BracketOrderForm />
           <TradingControls />
         </div>
       </div>

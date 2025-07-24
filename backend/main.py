@@ -2,7 +2,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
-from app.api import auth, trading, admin
+from app.api import auth, trading, admin, bracket_orders
 from app.services.websocket_manager import WebSocketManager
 
 app = FastAPI(
@@ -26,6 +26,7 @@ websocket_manager = WebSocketManager()
 # Include API routers
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(trading.router, prefix="/api/trading", tags=["trading"])
+app.include_router(bracket_orders.router, prefix="/api/bracket-orders", tags=["bracket-orders"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 
 @app.get("/")
