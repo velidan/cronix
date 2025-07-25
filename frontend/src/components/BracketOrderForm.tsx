@@ -12,6 +12,7 @@ import {
 } from '../types/bracketOrder'
 import { bracketOrdersApi } from '../services/bracketOrders'
 import { useTradingStore } from '../store/tradingStore'
+import { useBracketOrderStore } from '../store/bracketOrderStore'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -36,6 +37,7 @@ const bracketOrderSchema = z.object({
 
 const BracketOrderForm = () => {
   const { currentSymbol, addTradingLine, removeTradingLine } = useTradingStore()
+  const { addOrder } = useBracketOrderStore()
   const [showAdvanced, setShowAdvanced] = useState(false)
   const queryClient = useQueryClient()
 
@@ -75,6 +77,9 @@ const BracketOrderForm = () => {
     onSuccess: (data) => {
       console.log('Bracket order created:', data)
       queryClient.invalidateQueries({ queryKey: ['bracket-orders'] })
+      
+      // Add to bracket order store
+      addOrder(data)
       
       // Add trading lines to chart
       addOrderLinesToChart(data)

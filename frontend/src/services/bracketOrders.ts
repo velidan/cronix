@@ -21,6 +21,12 @@ export const bracketOrdersApi = {
     return response.data
   },
 
+  // Update a bracket order
+  update: async (orderId: string, updates: any): Promise<BracketOrderResponse> => {
+    const response = await api.put(`/bracket-orders/${orderId}`, updates)
+    return response.data
+  },
+
   // Cancel a bracket order
   cancel: async (orderId: string): Promise<{ message: string }> => {
     const response = await api.delete(`/bracket-orders/${orderId}`)

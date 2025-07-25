@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { useTradingStore } from '../store/tradingStore'
-import { Activity } from 'lucide-react'
+import { useBracketOrderStore } from '../store/bracketOrderStore'
+import { bracketOrdersApi } from '../services/bracketOrders'
+import PriceEditModal from './PriceEditModal'
+import { Activity, Edit3 } from 'lucide-react'
+import DraggablePriceLinesPlugin from './DraggablePriceLinesPlugin'
 
 const FinalTradingChart = () => {
   const [chartContainer, setChartContainer] = useState<HTMLDivElement | null>(null)
@@ -8,6 +12,16 @@ const FinalTradingChart = () => {
   const [seriesInstance, setSeriesInstance] = useState<any>(null)
   const [isChartReady, setIsChartReady] = useState(false)
   const [priceLines, setPriceLines] = useState<any[]>([])
+  const [draggablePlugin, setDraggablePlugin] = useState<DraggablePriceLinesPlugin | null>(null)
+  
+  // Modal state for price editing
+  const [showPriceModal, setShowPriceModal] = useState(false)
+  const [editingLine, setEditingLine] = useState<{
+    lineId: string
+    lineType: string
+    currentPrice: number
+    orderId: string
+  } | null>(null)
   
   const { 
     chartData, 
@@ -17,6 +31,53 @@ const FinalTradingChart = () => {
     currentTimeframe,
   } = useTradingStore()
 
+  const { 
+    getOrderByLineId, 
+    updateOrder, 
+    addOrderLine,
+    removeOrderLine 
+  } = useBracketOrderStore()
+  
+
+  // Handle edit button click for trading lines
+  const handleEditLine = useCallback((lineId: string) => {
+    const { order, lineType } = getOrderByLineId(lineId)
+    
+    if (!order || !lineType) {
+      console.error('Could not find order for line:', lineId)
+      return
+    }
+
+    // Get the current price based on line type
+    let currentPrice: number
+    switch (lineType) {
+      case 'entry':
+        currentPrice = order.entry_price || 0
+        break
+      case 'stop':
+        currentPrice = order.stop_loss_price || 0
+        break
+      case 'tp1':
+        currentPrice = order.take_profit_levels[0]?.price || 0
+        break
+      case 'tp2':
+        currentPrice = order.take_profit_levels[1]?.price || 0
+        break
+      default:
+        console.error('Unknown line type:', lineType)
+        return
+    }
+
+    // Show edit modal
+    setEditingLine({
+      lineId,
+      lineType,
+      currentPrice,
+      orderId: order.id
+    })
+    setShowPriceModal(true)
+  }, [getOrderByLineId])
+
   // Callback ref to get the container element
   const chartContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node) {
@@ -24,6 +85,7 @@ const FinalTradingChart = () => {
       setChartContainer(node)
     }
   }, [])
+
 
   // Initialize chart when container is available
   useEffect(() => {
@@ -37,6 +99,15 @@ const FinalTradingChart = () => {
     const initChart = async () => {
       try {
         console.log('Initializing chart with container:', chartContainer)
+        
+        // Clear any existing chart first
+        if (chartInstance) {
+          console.log('Removing existing chart before creating new one')
+          chartInstance.remove()
+          setChartInstance(null)
+          setSeriesInstance(null)
+          setIsChartReady(false)
+        }
         
         // Import the chart library
         const { createChart, ColorType, CrosshairMode } = await import('lightweight-charts')
@@ -81,11 +152,15 @@ const FinalTradingChart = () => {
           wickDownColor: '#ef4444',
         })
 
+        // Initialize draggable price lines plugin
+        const plugin = new DraggablePriceLinesPlugin(chart as any, series, { lines: [] })
+        
         console.log('Chart created successfully!')
         
         if (mounted) {
           setChartInstance(chart)
           setSeriesInstance(series)
+          setDraggablePlugin(plugin)
           setIsChartReady(true)
         }
 
@@ -100,9 +175,20 @@ const FinalTradingChart = () => {
     return () => {
       mounted = false
       clearTimeout(timer)
+      if (draggablePlugin) {
+        try {
+          draggablePlugin.destroy()
+        } catch (error) {
+          console.error('Error cleaning up draggable plugin:', error)
+        }
+      }
       if (chartInstance) {
-        console.log('Cleaning up chart')
-        chartInstance.remove()
+        try {
+          console.log('Cleaning up chart')
+          chartInstance.remove()
+        } catch (error) {
+          console.error('Error cleaning up chart:', error)
+        }
       }
     }
   }, [chartContainer])
@@ -119,51 +205,157 @@ const FinalTradingChart = () => {
     }
   }, [seriesInstance, chartData])
 
-  // Add trading lines to chart
-  useEffect(() => {
-    if (!seriesInstance) return
+  // Confirm price update
+  const confirmPriceUpdate = useCallback(async (newPrice: number) => {
+    if (!editingLine) return
 
-    console.log('Updating trading lines:', tradingLines.length)
+    try {
+      const { orderId, lineType } = editingLine
+
+      // Build update payload based on line type
+      const updates: any = {}
+      switch (lineType) {
+        case 'entry':
+          updates.entry_price = newPrice
+          break
+        case 'stop':
+          updates.stop_loss_price = newPrice
+          break
+        case 'tp1':
+        case 'tp2':
+          // For take profits, we need to update the take_profit_levels array
+          // This requires getting the full order and updating the specific level
+          console.log('Take profit updates not yet implemented')
+          return
+      }
+
+      // Call API to update order
+      await bracketOrdersApi.update(orderId, updates)
+      
+      // Update local state
+      updateOrder(orderId, updates)
+      
+      console.log('Price updated successfully:', lineType, newPrice)
+      
+      // Close modal
+      setEditingLine(null)
+      setShowPriceModal(false)
+      
+    } catch (error) {
+      console.error('Failed to update price:', error)
+      throw error
+    }
+  }, [editingLine, updateOrder])
+
+  // Handle price drag end event
+  const handlePriceDragEnd = useCallback(async (lineId: string, oldPrice: number, newPrice: number) => {
+    try {
+      const { order, lineType } = getOrderByLineId(lineId)
+      
+      if (!order || !lineType) {
+        console.error('Could not find order for line:', lineId)
+        return
+      }
+
+      // Build update payload based on line type
+      const updates: any = {}
+      switch (lineType) {
+        case 'entry':
+          updates.entry_price = newPrice
+          break
+        case 'stop':
+          updates.stop_loss_price = newPrice
+          break
+        case 'tp1':
+        case 'tp2':
+          // For take profits, we need to update the take_profit_levels array
+          const currentOrder = getOrderByLineId(lineId).order
+          if (!currentOrder || !currentOrder.take_profit_levels) return
+          
+          const levelIndex = lineType === 'tp1' ? 0 : 1
+          if (levelIndex >= currentOrder.take_profit_levels.length) return
+          
+          // Create updated take profit levels array
+          const updatedLevels = [...currentOrder.take_profit_levels]
+          updatedLevels[levelIndex] = {
+            ...updatedLevels[levelIndex],
+            price: newPrice
+          }
+          
+          updates.take_profit_levels = updatedLevels
+          break
+      }
+
+      // Call API to update order
+      await bracketOrdersApi.update(order.id, updates)
+      
+      // Update local state
+      updateOrder(order.id, updates)
+      
+      console.log('Price updated via drag:', lineType, 'from', oldPrice, 'to', newPrice)
+      
+    } catch (error) {
+      console.error('Failed to update price via drag:', error)
+      // Revert the line back to original price on error
+      if (draggablePlugin) {
+        draggablePlugin.updateLine(lineId, { price: oldPrice })
+      }
+    }
+  }, [getOrderByLineId, updateOrder, draggablePlugin])
+
+  // Add trading lines to chart using draggable plugin
+  useEffect(() => {
+    if (!draggablePlugin) return
+
+    console.log('Updating draggable trading lines:', tradingLines.length)
     
     try {
-      // Remove existing price lines
-      priceLines.forEach(priceLine => {
-        try {
-          seriesInstance.removePriceLine(priceLine)
-        } catch (err) {
-          console.log('Failed to remove price line:', err)
+      // Clear existing lines from plugin
+      const existingLines = draggablePlugin.getLines()
+      existingLines.forEach(line => {
+        draggablePlugin.removeLine(line.id)
+      })
+      
+      // Add new trading lines
+      tradingLines.forEach(line => {
+        if (line.id.startsWith('order-')) {
+          console.log('Adding draggable line:', line.label, line.price)
+          
+          draggablePlugin.addLine({
+            id: line.id,
+            price: line.price,
+            color: line.color,
+            title: line.label,
+            lineWidth: 2,
+            lineStyle: 2, // Dashed line
+            onDragStart: (price) => {
+              console.log('Drag started for', line.label, 'at price', price)
+            },
+            onDrag: (price) => {
+              // Update real-time during drag
+              console.log('Dragging', line.label, 'to price', price)
+            },
+            onDragEnd: (oldPrice, newPrice) => {
+              console.log('Drag ended for', line.label, 'from', oldPrice, 'to', newPrice)
+              handlePriceDragEnd(line.id, oldPrice, newPrice)
+            }
+          })
+          
+          // Track the price line for bracket orders
+          const match = line.id.match(/^order-(.+)-(.+)$/)
+          if (match) {
+            const [, orderId, lineType] = match
+            // Note: We'll need to adapt addOrderLine to work with the plugin
+            // addOrderLine(orderId, lineType, priceLine)
+          }
         }
       })
       
-      // Clear the price lines array
-      setPriceLines([])
-      
-      // Add new trading lines
-      if (tradingLines.length > 0) {
-        const newPriceLines: any[] = []
-        
-        tradingLines.forEach(line => {
-          console.log('Creating price line:', line.label, line.price)
-          
-          const priceLine = seriesInstance.createPriceLine({
-            price: line.price,
-            color: line.color,
-            lineWidth: 2,
-            lineStyle: 2, // Dashed line
-            axisLabelVisible: true,
-            title: line.label,
-          })
-          
-          newPriceLines.push(priceLine)
-        })
-        
-        setPriceLines(newPriceLines)
-        console.log('Created', newPriceLines.length, 'price lines')
-      }
+      console.log('Updated draggable trading lines')
     } catch (error) {
-      console.error('Failed to update trading lines:', error)
+      console.error('Failed to update draggable trading lines:', error)
     }
-  }, [seriesInstance, tradingLines])
+  }, [draggablePlugin, tradingLines, handlePriceDragEnd])
 
   if (isLoading) {
     return (
@@ -230,22 +422,52 @@ const FinalTradingChart = () => {
 
       {/* Trading Lines Legend */}
       {tradingLines.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {tradingLines.map((line) => (
-            <div 
-              key={line.id}
-              className="flex items-center space-x-2 px-3 py-1 bg-secondary rounded-lg text-sm"
-            >
+        <div className="mt-4 space-y-2">
+          <div className="flex flex-wrap gap-2">
+            {tradingLines.map((line) => (
               <div 
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: line.color }}
-              />
-              <span className="text-secondary-foreground">
-                {line.label}: ${line.price.toFixed(2)}
-              </span>
-            </div>
-          ))}
+                key={line.id}
+                className="flex items-center space-x-2 px-3 py-1 bg-secondary rounded-lg text-sm"
+              >
+                <div 
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: line.color }}
+                />
+                <span className="text-secondary-foreground">
+                  {line.label}: ${line.price.toFixed(2)}
+                </span>
+                {/* Add edit button for order lines */}
+                {line.id.startsWith('order-') && (
+                  <button
+                    onClick={() => handleEditLine(line.id)}
+                    className="ml-2 p-1 hover:bg-secondary-foreground/10 rounded transition-colors"
+                    title="Edit price"
+                  >
+                    <Edit3 className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            🖱️ Drag any trading line on the chart to modify its price, or click the edit button
+          </p>
         </div>
+      )}
+
+      {/* Price Edit Modal */}
+      {editingLine && (
+        <PriceEditModal
+          isOpen={showPriceModal}
+          onClose={() => {
+            setShowPriceModal(false)
+            setEditingLine(null)
+          }}
+          onConfirm={confirmPriceUpdate}
+          lineType={editingLine.lineType}
+          currentPrice={editingLine.currentPrice}
+          symbol={currentSymbol}
+        />
       )}
     </div>
   )

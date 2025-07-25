@@ -54,11 +54,36 @@
 - **Demo Available**: Fully functional demo with login and dashboard
 - **Next Priority**: Database models and KuCoin integration
 
-### ⏳ PENDING HIGH PRIORITY - PHASE 2
+### ✅ COMPLETED TASKS - PHASE 2 (TRADING CHARTS & BRACKET ORDERS)
+- [x] **Chart Implementation**: TradingView Lightweight Charts integration
+  - [x] Professional candlestick charts with dark theme
+  - [x] Real-time price updates every 2 seconds
+  - [x] Coin switching (BTC, ETH, BNB, ADA, SOL, DOT, MATIC, LINK)
+  - [x] Timeframe switching (1m, 5m, 15m, 1h, 4h, 1d, 1w)
+  - [x] Chart zoom, scroll, and interactive features
+  - [x] OHLC data display with live updates
+- [x] **Bracket Order System**: Industry-standard order management
+  - [x] Market vs Limit entry types
+  - [x] Optional stop loss configuration
+  - [x] Multiple take profit levels (up to 2)
+  - [x] Smart price validation based on order side
+  - [x] Automatic chart line visualization
+  - [x] Color-coded trading lines (Entry: Blue, Stop: Red, TP1: Green, TP2: Cyan)
+  - [x] Complete backend API with validation
+  - [x] Professional frontend form with BUY/SELL toggles
+
+### ⏳ PENDING HIGH PRIORITY - PHASE 3
+
+- [ ] **Interactive Trading Lines**: Draggable chart line functionality
+  - [ ] Implement draggable trading lines on chart
+  - [ ] Add confirmation popup when dragging stops (Apply/Cancel)
+  - [ ] Integrate line drag updates with bracket order modification API
+  - [ ] Validate new prices on drag (maintain order logic)
+  - [ ] Update order in backend when user confirms changes
 
 ---
 
-## 📋 PHASE 2: Core Backend (Next Phase)
+## 📋 PHASE 3: Advanced Features (Next Phase)
 
 ### ⏳ PENDING MEDIUM PRIORITY
 - [ ] **Task 2.1**: Database Setup
@@ -151,21 +176,40 @@
 - **Login**: demo/demo credentials
 - **API Integration**: All endpoints functional with demo data
 - **WebSocket**: Real-time connection manager ready
+- **TradingView Charts**: Professional candlestick charts with real-time updates
+- **Bracket Orders**: Complete order system with automatic chart line visualization
 
 ---
 
-## 🚀 Quick Start Commands (To be added as we progress)
+## 🚀 Quick Start Commands
 
+### Development Setup
 ```bash
-# Development setup (future)
-docker-compose up -d
+# Backend setup
+cd backend
+python -m venv venv
+venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+python main.py
 
-# Backend setup (future)
-cd backend && pip install -r requirements.txt
-
-# Frontend setup (future)
-cd frontend && npm install && npm run dev
+# Frontend setup (new terminal)
+cd frontend
+npm install
+npm run dev
 ```
+
+### Access Points
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+- **Login**: demo / demo
+
+### Current Features
+- **TradingView Charts**: Professional candlestick charts with real-time updates
+- **Bracket Orders**: Market/Limit orders with stop loss and take profit levels
+- **Chart Integration**: Trading lines automatically appear when orders are placed
+- **Coin Switching**: 8 different trading pairs
+- **Timeframes**: 1m, 5m, 15m, 1h, 4h, 1d, 1w
 
 ---
 
