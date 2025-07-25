@@ -36,10 +36,21 @@ export class DraggablePriceLinesPlugin {
   private dragLineId: string | null = null
   private dragStartPrice = 0
   private clickHandler: any
+  public onDragStateChange?: (isDragging: boolean) => void
+  private boundMouseDown: (event: MouseEvent) => void
+  private boundMouseMove: (event: MouseEvent) => void
+  private boundMouseUp: (event: MouseEvent) => void
+  private boundGlobalMouseUp: (event: MouseEvent) => void
 
   constructor(chart: ChartApi, series: any, options: PluginOptions = { lines: [] }) {
     this.chart = chart
     this.series = series
+    
+    // Bind event handlers to maintain proper 'this' context
+    this.boundMouseDown = this.handleMouseDown.bind(this)
+    this.boundMouseMove = this.handleMouseMove.bind(this)
+    this.boundMouseUp = this.handleMouseUp.bind(this)
+    this.boundGlobalMouseUp = this.handleGlobalMouseUp.bind(this)
     
     // Add initial lines
     options.lines.forEach(line => this.addLine(line))
@@ -78,13 +89,16 @@ export class DraggablePriceLinesPlugin {
     }
     
     // Mouse down handler
-    chartElement.addEventListener('mousedown', this.handleMouseDown.bind(this))
+    chartElement.addEventListener('mousedown', this.boundMouseDown)
     
-    // Mouse move handler
-    chartElement.addEventListener('mousemove', this.handleMouseMove.bind(this))
+    // Mouse move handler  
+    chartElement.addEventListener('mousemove', this.boundMouseMove)
     
     // Mouse up handler
-    chartElement.addEventListener('mouseup', this.handleMouseUp.bind(this))
+    chartElement.addEventListener('mouseup', this.boundMouseUp)
+    
+    // Global mouse up handler to catch mouse releases outside the chart
+    document.addEventListener('mouseup', this.boundGlobalMouseUp)
     
     // Prevent context menu on price lines
     chartElement.addEventListener('contextmenu', (e) => {
@@ -140,6 +154,11 @@ export class DraggablePriceLinesPlugin {
         // Change cursor
         chartElement.style.cursor = 'grabbing'
         
+        // Notify drag state change
+        if (this.onDragStateChange) {
+          this.onDragStateChange(true)
+        }
+        
         // Prevent chart interaction
         event.preventDefault()
         event.stopPropagation()
@@ -181,6 +200,7 @@ export class DraggablePriceLinesPlugin {
         line.onDrag(newPrice)
       }
       
+      
       // Prevent chart interaction during drag
       event.preventDefault()
       event.stopPropagation()
@@ -206,6 +226,14 @@ export class DraggablePriceLinesPlugin {
   }
 
   private handleMouseUp(event: MouseEvent) {
+    this.endDrag(event)
+  }
+
+  private handleGlobalMouseUp(event: MouseEvent) {
+    this.endDrag(event)
+  }
+
+  private endDrag(event: MouseEvent) {
     if (this.isDragging && this.dragLineId) {
       const line = this.lines.get(this.dragLineId)!
       
@@ -217,6 +245,11 @@ export class DraggablePriceLinesPlugin {
       this.isDragging = false
       this.dragLineId = null
       this.dragStartPrice = 0
+      
+      // Notify drag state change
+      if (this.onDragStateChange) {
+        this.onDragStateChange(false)
+      }
       
       // Reset cursor
       const chartElement = this.getChartElement()
@@ -279,6 +312,7 @@ export class DraggablePriceLinesPlugin {
     }
   }
 
+
   destroy(): void {
     // Remove all price lines
     this.priceLines.forEach(priceLine => {
@@ -288,10 +322,13 @@ export class DraggablePriceLinesPlugin {
     // Remove event listeners
     const chartElement = this.getChartElement()
     if (chartElement) {
-      chartElement.removeEventListener('mousedown', this.handleMouseDown.bind(this))
-      chartElement.removeEventListener('mousemove', this.handleMouseMove.bind(this))
-      chartElement.removeEventListener('mouseup', this.handleMouseUp.bind(this))
+      chartElement.removeEventListener('mousedown', this.boundMouseDown)
+      chartElement.removeEventListener('mousemove', this.boundMouseMove)
+      chartElement.removeEventListener('mouseup', this.boundMouseUp)
     }
+    
+    // Remove global event listener
+    document.removeEventListener('mouseup', this.boundGlobalMouseUp)
     
     // Clear maps
     this.lines.clear()

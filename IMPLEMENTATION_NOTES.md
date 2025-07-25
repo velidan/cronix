@@ -29,6 +29,9 @@
 - ✅ Timeframe switching (7 timeframes)
 - ✅ Trading line visualization
 - ✅ OHLC data display
+- ✅ **Fully draggable trading lines**
+- ✅ **Real-time price updates during drag**
+- ✅ **API integration for drag-to-update**
 
 ### Orders
 - ✅ Bracket order form with BUY/SELL toggles
@@ -37,6 +40,8 @@
 - ✅ Multiple take profit levels
 - ✅ Automatic chart line creation
 - ✅ Color-coded lines (Blue: Entry, Red: Stop, Green/Cyan: TPs)
+- ✅ **Drag-to-modify order prices (Entry, Stop Loss, TP1, TP2)**
+- ✅ **Live price updates saved to backend**
 
 ## 🔧 Technical Details
 
@@ -74,7 +79,7 @@ BracketOrderForm.tsx
 ## 🐛 Known Issues
 
 1. **Authentication**: Bracket orders temporarily bypass auth
-2. **Chart Lines**: No drag functionality yet (lines are non-draggable)
+2. **Viewport Limitation**: Lines can't be dragged outside visible chart area (auto-scroll not implemented)
 3. **Order Management**: No order cancellation from UI yet
 
 ## 🎮 Testing Instructions
@@ -100,21 +105,29 @@ BracketOrderForm.tsx
 
 ## 🔄 For Next Session
 
-### Priority 1: Interactive Trading Lines
-1. **Draggable Lines**: Enable drag functionality on chart trading lines
-2. **Confirmation Popup**: Show Apply/Cancel dialog when user stops dragging
-3. **Order Modification**: Update bracket order when user confirms price changes
-4. **Price Validation**: Ensure dragged prices maintain order logic (stop < entry < take profit for buys)
+### CRITICAL ISSUE TO SOLVE TOMORROW ⚠️
+**CHART PANNING BUG**: After dragging a trading line and releasing it, the chart continues to pan/move with the mouse cursor as if the user is still holding down the mouse button. This makes the interface unusable.
 
-### Priority 2: System Improvements
+**Attempted Solutions (ALL FAILED)**:
+1. ✗ Event propagation control (`preventDefault`, `stopPropagation`, `stopImmediatePropagation`)
+2. ✗ Proper event listener binding and cleanup (using bound methods)
+3. ✗ Global mouse up listeners to catch releases outside chart
+4. ✗ Disabling chart options (`handleScroll: false`, `handleScale: false`) during drag
+5. ✗ DOM pointer events manipulation (`pointerEvents: 'none'`)
+
+**Research Areas for Tomorrow**:
+- TradingView Lightweight Charts interaction system internals
+- Alternative drag implementation approaches (custom overlay, different event handling)
+- Chart container event bubbling issues
+- Mouse capture/release patterns for chart libraries
+
+**Files Involved**:
+- `/frontend/src/components/DraggablePriceLinesPlugin.ts` (main plugin)
+- `/frontend/src/components/FinalTradingChart.tsx` (integration)
+
+### Priority 1: System Improvements
 1. **Fix Authentication**: Re-enable and fix bracket order auth
 2. **Order Management**: Add order list and cancellation UI
 3. **Real KuCoin**: Connect to actual KuCoin API
 4. **Database**: Add PostgreSQL for order persistence
 5. **WebSocket**: Real-time order updates
-
-### Implementation Notes for Draggable Lines
-- **Component**: `FinalTradingChart.tsx` needs drag event handlers
-- **API**: Use existing `PUT /api/bracket-orders/{id}` endpoint
-- **UX Flow**: Drag → Stop → Popup → Confirm → API Call → Chart Update
-- **Validation**: Client-side validation before API call to prevent invalid orders

@@ -155,6 +155,20 @@ const FinalTradingChart = () => {
         // Initialize draggable price lines plugin
         const plugin = new DraggablePriceLinesPlugin(chart as any, series, { lines: [] })
         
+        // Disable chart interactions during line dragging
+        plugin.onDragStateChange = (isDragging: boolean) => {
+          try {
+            const chartOptions = chart.options()
+            chart.applyOptions({
+              ...chartOptions,
+              handleScroll: !isDragging,
+              handleScale: !isDragging,
+            })
+          } catch (error) {
+            console.warn('Could not update chart options:', error)
+          }
+        }
+        
         console.log('Chart created successfully!')
         
         if (mounted) {
