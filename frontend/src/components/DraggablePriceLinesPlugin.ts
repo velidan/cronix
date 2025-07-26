@@ -41,10 +41,18 @@ export class DraggablePriceLinesPlugin {
   private boundMouseMove: (event: MouseEvent) => void
   private boundMouseUp: (event: MouseEvent) => void
   private boundGlobalMouseUp: (event: MouseEvent) => void
+  private chartOptions: any = null
 
   constructor(chart: ChartApi, series: any, options: PluginOptions = { lines: [] }) {
     this.chart = chart
     this.series = series
+    
+    // Store original chart options for restoration
+    try {
+      this.chartOptions = (this.chart as any).options()
+    } catch (error) {
+      console.warn('Could not get chart options:', error)
+    }
     
     // Bind event handlers to maintain proper 'this' context
     this.boundMouseDown = this.handleMouseDown.bind(this)
@@ -154,15 +162,16 @@ export class DraggablePriceLinesPlugin {
         // Change cursor
         chartElement.style.cursor = 'grabbing'
         
+        // Disable chart interactions safely
+        this.disableChartInteractions()
+        
         // Notify drag state change
         if (this.onDragStateChange) {
           this.onDragStateChange(true)
         }
         
-        // Prevent chart interaction
+        // Only prevent default, don't stop propagation to avoid breaking chart's event system
         event.preventDefault()
-        event.stopPropagation()
-        event.stopImmediatePropagation()
         
         // Call onDragStart callback
         if (line.onDragStart) {
@@ -200,11 +209,8 @@ export class DraggablePriceLinesPlugin {
         line.onDrag(newPrice)
       }
       
-      
-      // Prevent chart interaction during drag
+      // Only prevent default during drag
       event.preventDefault()
-      event.stopPropagation()
-      event.stopImmediatePropagation()
     } else {
       // Check if mouse is over a draggable line
       const price = this.series.coordinateToPrice(y)
@@ -242,9 +248,13 @@ export class DraggablePriceLinesPlugin {
         line.onDragEnd(this.dragStartPrice, line.price)
       }
       
+      // Clean up drag state
       this.isDragging = false
       this.dragLineId = null
       this.dragStartPrice = 0
+      
+      // Re-enable chart interactions properly
+      this.enableChartInteractions()
       
       // Notify drag state change
       if (this.onDragStateChange) {
@@ -257,10 +267,8 @@ export class DraggablePriceLinesPlugin {
         chartElement.style.cursor = 'default'
       }
       
-      // Prevent chart interaction
-      event.preventDefault()
-      event.stopPropagation()
-      event.stopImmediatePropagation()
+      // Force the chart to update its internal state
+      this.forceChartUpdate()
     }
   }
 
@@ -309,6 +317,56 @@ export class DraggablePriceLinesPlugin {
       
       // Create new line with updated price
       this.createPriceLine(id, line)
+    }
+  }
+
+  private disableChartInteractions(): void {
+    try {
+      if (this.chartOptions) {
+        (this.chart as any).applyOptions({
+          handleScroll: false,
+          handleScale: false,
+        })
+      }
+    } catch (error) {
+      console.warn('Could not disable chart interactions:', error)
+    }
+  }
+
+  private enableChartInteractions(): void {
+    try {
+      if (this.chartOptions) {
+        // Restore original options
+        (this.chart as any).applyOptions({
+          handleScroll: this.chartOptions.handleScroll !== false,
+          handleScale: this.chartOptions.handleScale !== false,
+        })
+      }
+    } catch (error) {
+      console.warn('Could not enable chart interactions:', error)
+    }
+  }
+
+  private forceChartUpdate(): void {
+    try {
+      // Force the chart to update its internal mouse state
+      const chartElement = this.getChartElement()
+      if (chartElement) {
+        // Create a synthetic mousemove event to reset chart's internal state
+        const syntheticEvent = new MouseEvent('mousemove', {
+          bubbles: true,
+          cancelable: true,
+          clientX: -1,
+          clientY: -1
+        })
+        
+        // Dispatch it briefly to trigger chart's internal cleanup
+        setTimeout(() => {
+          chartElement.dispatchEvent(syntheticEvent)
+        }, 10)
+      }
+    } catch (error) {
+      console.warn('Could not force chart update:', error)
     }
   }
 
