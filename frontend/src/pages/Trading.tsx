@@ -1,9 +1,12 @@
 import { useEffect } from 'react'
 import { useTradingStore } from '../store/tradingStore'
+import { useBracketOrderStore } from '../store/bracketOrderStore'
+import { bracketOrdersApi } from '../services/bracketOrders'
 import { generateDemoChartData, generatePriceUpdate } from '../utils/chartData'
 import FinalTradingChart from '../components/FinalTradingChart'
 import TradingControls from '../components/TradingControls'
 import BracketOrderForm from '../components/BracketOrderForm'
+import { useOrderTradingLines } from '../hooks/useOrderTradingLines'
 
 const Trading = () => {
   const { 
@@ -14,6 +17,24 @@ const Trading = () => {
     updateLastCandle,
     setLoading 
   } = useTradingStore()
+
+  const { setOrders } = useBracketOrderStore()
+
+  // Sync orders with trading lines
+  useOrderTradingLines()
+
+  // Load orders on mount
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        const orders = await bracketOrdersApi.getAll()
+        setOrders(orders)
+      } catch (error) {
+        console.error('Failed to load orders:', error)
+      }
+    }
+    loadOrders()
+  }, [setOrders])
 
   // Load chart data when symbol or timeframe changes
   useEffect(() => {

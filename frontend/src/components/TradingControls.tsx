@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useTradingStore } from '../store/tradingStore'
+import { useBracketOrderStore } from '../store/bracketOrderStore'
+import { bracketOrdersApi } from '../services/bracketOrders'
 import { TimeFrame, TradingLine } from '../types/trading'
 import { Plus, Trash2, TrendingUp, TrendingDown, Target, DollarSign } from 'lucide-react'
 
@@ -13,6 +15,8 @@ const TradingControls = () => {
     addTradingLine,
     removeTradingLine
   } = useTradingStore()
+
+  const { orders, removeOrder } = useBracketOrderStore()
 
   const [newLinePrice, setNewLinePrice] = useState('')
   const [selectedLineType, setSelectedLineType] = useState<TradingLine['type']>('entry')
@@ -58,6 +62,19 @@ const TradingControls = () => {
 
     addTradingLine(newLine)
     setNewLinePrice('')
+  }
+
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      // Delete the order from backend
+      await bracketOrdersApi.cancel(orderId)
+      // Remove from local store
+      removeOrder(orderId)
+      console.log('Order deleted successfully:', orderId)
+    } catch (error) {
+      console.error('Failed to delete order:', error)
+      alert('Failed to delete order. Please try again.')
+    }
   }
 
   return (
@@ -138,40 +155,59 @@ const TradingControls = () => {
           </button>
         </div>
 
-        {/* Active Trading Lines */}
-        {tradingLines.length > 0 && (
+        {/* Active Orders */}
+        {orders.length > 0 && (
           <div className="space-y-2">
-            <h5 className="text-sm font-medium text-muted-foreground">Active Lines:</h5>
-            {tradingLines.map((line) => {
-              const config = lineTypes[line.type]
-              const Icon = config.icon
-              return (
-                <div
-                  key={line.id}
-                  className="flex items-center justify-between p-3 bg-secondary rounded-lg"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: line.color }}
-                    />
-                    <Icon className="h-4 w-4 text-secondary-foreground" />
-                    <span className="text-secondary-foreground font-medium">
-                      {line.label}
+            <h5 className="text-sm font-medium text-muted-foreground">Active Orders:</h5>
+            {orders.map((order) => (
+              <div
+                key={order.id}
+                className="p-3 bg-secondary rounded-lg space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <span className={`font-medium ${
+                      order.side === 'buy' ? 'text-green-500' : 'text-red-500'
+                    }`}>
+                      {order.side.toUpperCase()}
                     </span>
                     <span className="text-secondary-foreground">
-                      ${line.price.toFixed(2)}
+                      {order.symbol}
+                    </span>
+                    <span className="text-muted-foreground text-sm">
+                      Qty: {order.quantity}
                     </span>
                   </div>
                   <button
-                    onClick={() => removeTradingLine(line.id)}
+                    onClick={() => handleDeleteOrder(order.id)}
                     className="text-destructive hover:text-destructive/80 p-1 rounded"
+                    title="Delete entire order"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-              )
-            })}
+                <div className="space-y-1 text-sm">
+                  {order.entry_price && (
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Entry:</span>
+                      <span>${Number(order.entry_price).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {order.stop_loss_price && (
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Stop Loss:</span>
+                      <span>${Number(order.stop_loss_price).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {order.take_profit_levels?.map((tp, index) => (
+                    <div key={index} className="flex items-center justify-between text-muted-foreground">
+                      <span>TP{index + 1}:</span>
+                      <span>${Number(tp.price).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

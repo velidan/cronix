@@ -3,7 +3,7 @@ import { useTradingStore } from '../store/tradingStore'
 import { useBracketOrderStore } from '../store/bracketOrderStore'
 import { bracketOrdersApi } from '../services/bracketOrders'
 import PriceEditModal from './PriceEditModal'
-import { Activity, Edit3 } from 'lucide-react'
+import { Activity, Edit3, Check, X, XCircle } from 'lucide-react'
 import DraggablePriceLinesPlugin from './DraggablePriceLinesPlugin'
 
 const FinalTradingChart = () => {
@@ -22,6 +22,16 @@ const FinalTradingChart = () => {
     currentPrice: number
     orderId: string
   } | null>(null)
+  
+  // State for tracking pending drag changes
+  const [pendingChanges, setPendingChanges] = useState<Map<string, {
+    lineId: string
+    lineType: string
+    orderId: string
+    oldPrice: number
+    newPrice: number
+  }>>(new Map())
+  const [tempPrices, setTempPrices] = useState<Map<string, number>>(new Map())
   
   const { 
     chartData, 
@@ -77,6 +87,75 @@ const FinalTradingChart = () => {
     })
     setShowPriceModal(true)
   }, [getOrderByLineId])
+
+  // Handle cancel button click for individual trading lines
+  const handleCancelLine = useCallback(async (lineId: string) => {
+    const { order, lineType } = getOrderByLineId(lineId)
+    
+    if (!order || !lineType) {
+      console.error('Could not find order for line:', lineId)
+      return
+    }
+
+    try {
+      // Build update payload to remove the specific line
+      const updates: any = {}
+      
+      switch (lineType) {
+        case 'stop':
+          updates.stop_loss_price = null
+          break
+        case 'tp1':
+        case 'tp2':
+          // For take profits, we need to remove from the array
+          if (!order.take_profit_levels || order.take_profit_levels.length === 0) return
+          
+          const levelIndex = lineType === 'tp1' ? 0 : 1
+          
+          // Make sure the index exists
+          if (levelIndex >= order.take_profit_levels.length) {
+            alert(`Take profit level ${levelIndex + 1} does not exist`)
+            return
+          }
+          
+          // Create new array without the specified level
+          if (lineType === 'tp1' && order.take_profit_levels.length > 1) {
+            // If removing TP1 and TP2 exists, move TP2 to TP1 position
+            updates.take_profit_levels = [order.take_profit_levels[1]]
+          } else if (lineType === 'tp2') {
+            // If removing TP2, keep TP1 if it exists
+            updates.take_profit_levels = levelIndex === 1 && order.take_profit_levels.length > 1 
+              ? [order.take_profit_levels[0]] 
+              : []
+          } else {
+            // Default case
+            updates.take_profit_levels = order.take_profit_levels.filter((_, index) => index !== levelIndex)
+          }
+          break
+        case 'entry':
+          // Can't cancel entry line - it's required
+          alert("Entry line cannot be cancelled. Delete the entire order instead.")
+          return
+      }
+
+      console.log('Cancelling line:', lineType, 'for order:', order.id, 'updates:', updates)
+      console.log('Order before API call:', order)
+
+      // Call API to update order
+      const updatedOrder = await bracketOrdersApi.update(order.id, updates)
+      
+      // Update local state with the full order response from server
+      console.log('Updated order from server:', updatedOrder)
+      console.log('Stop loss in response:', updatedOrder.stop_loss_price)
+      updateOrder(order.id, updatedOrder)
+      
+      console.log('Line cancelled successfully')
+      
+    } catch (error) {
+      console.error('Failed to cancel line:', error)
+      alert('Failed to cancel line. Please try again.')
+    }
+  }, [getOrderByLineId, updateOrder])
 
   // Callback ref to get the container element
   const chartContainerRef = useCallback((node: HTMLDivElement | null) => {
@@ -248,60 +327,154 @@ const FinalTradingChart = () => {
   }, [editingLine, updateOrder])
 
   // Handle price drag end event
-  const handlePriceDragEnd = useCallback(async (lineId: string, oldPrice: number, newPrice: number) => {
+  const handlePriceDragEnd = useCallback((lineId: string, oldPrice: number, newPrice: number) => {
+    const { order, lineType } = getOrderByLineId(lineId)
+    
+    if (!order || !lineType) {
+      console.error('Could not find order for line:', lineId)
+      return
+    }
+
+    // Skip if price didn't change
+    if (Math.abs(oldPrice - newPrice) < 0.01) {
+      console.log('Price unchanged, skipping update')
+      return
+    }
+
+    // Store the pending change
+    setPendingChanges(prev => {
+      const newMap = new Map(prev)
+      newMap.set(lineId, {
+        lineId,
+        lineType,
+        orderId: order.id,
+        oldPrice,
+        newPrice
+      })
+      return newMap
+    })
+    
+    // Update temp prices for display
+    setTempPrices(prev => {
+      const newMap = new Map(prev)
+      newMap.set(lineId, newPrice)
+      return newMap
+    })
+  }, [getOrderByLineId])
+
+  // Apply all pending changes
+  const applyPendingChanges = useCallback(async () => {
+    const changes = Array.from(pendingChanges.values())
+    if (changes.length === 0) return
+
     try {
-      const { order, lineType } = getOrderByLineId(lineId)
-      
-      if (!order || !lineType) {
-        console.error('Could not find order for line:', lineId)
-        return
-      }
+      // Group changes by order ID to make batch updates
+      const changesByOrder = new Map<string, typeof changes>()
+      changes.forEach(change => {
+        const orderChanges = changesByOrder.get(change.orderId) || []
+        orderChanges.push(change)
+        changesByOrder.set(change.orderId, orderChanges)
+      })
 
-      // Build update payload based on line type
-      const updates: any = {}
-      switch (lineType) {
-        case 'entry':
-          updates.entry_price = newPrice
-          break
-        case 'stop':
-          updates.stop_loss_price = newPrice
-          break
-        case 'tp1':
-        case 'tp2':
-          // For take profits, we need to update the take_profit_levels array
-          const currentOrder = getOrderByLineId(lineId).order
-          if (!currentOrder || !currentOrder.take_profit_levels) return
-          
-          const levelIndex = lineType === 'tp1' ? 0 : 1
-          if (levelIndex >= currentOrder.take_profit_levels.length) return
-          
-          // Create updated take profit levels array
-          const updatedLevels = [...currentOrder.take_profit_levels]
-          updatedLevels[levelIndex] = {
-            ...updatedLevels[levelIndex],
-            price: newPrice
+      // Process each order's changes
+      for (const [orderId, orderChanges] of changesByOrder) {
+        const { order } = getOrderByLineId(orderChanges[0].lineId)
+        if (!order) continue
+
+        // Build update payload
+        const updates: any = {}
+        let takeProfitLevels = order.take_profit_levels ? [...order.take_profit_levels] : []
+
+        orderChanges.forEach(change => {
+          switch (change.lineType) {
+            case 'entry':
+              updates.entry_price = change.newPrice
+              break
+            case 'stop':
+              updates.stop_loss_price = change.newPrice
+              break
+            case 'tp1':
+              if (takeProfitLevels.length > 0) {
+                takeProfitLevels[0] = { ...takeProfitLevels[0], price: change.newPrice }
+              }
+              break
+            case 'tp2':
+              if (takeProfitLevels.length > 1) {
+                takeProfitLevels[1] = { ...takeProfitLevels[1], price: change.newPrice }
+              }
+              break
           }
-          
-          updates.take_profit_levels = updatedLevels
-          break
-      }
+        })
 
-      // Call API to update order
-      await bracketOrdersApi.update(order.id, updates)
+        // Add take profit levels if they were modified
+        if (orderChanges.some(c => c.lineType === 'tp1' || c.lineType === 'tp2')) {
+          updates.take_profit_levels = takeProfitLevels
+        }
+
+        console.log('Applying changes for order:', orderId, updates)
+
+        // Call API to update order
+        const updatedOrder = await bracketOrdersApi.update(orderId, updates)
+        
+        // Update local state with the response from server
+        updateOrder(orderId, updatedOrder)
+      }
       
-      // Update local state
-      updateOrder(order.id, updates)
-      
-      console.log('Price updated via drag:', lineType, 'from', oldPrice, 'to', newPrice)
+      // Clear pending changes
+      setPendingChanges(new Map())
+      setTempPrices(new Map())
+      console.log('All changes applied successfully')
       
     } catch (error) {
-      console.error('Failed to update price via drag:', error)
-      // Revert the line back to original price on error
-      if (draggablePlugin) {
-        draggablePlugin.updateLine(lineId, { price: oldPrice })
-      }
+      console.error('Failed to apply changes:', error)
+      // Revert all lines back to original prices
+      pendingChanges.forEach(change => {
+        if (draggablePlugin) {
+          draggablePlugin.updateLine(change.lineId, { price: change.oldPrice })
+        }
+      })
+      // Clear pending changes
+      setPendingChanges(new Map())
+      setTempPrices(new Map())
+      alert('Failed to update order prices. Please try again.')
     }
-  }, [getOrderByLineId, updateOrder, draggablePlugin])
+  }, [pendingChanges, getOrderByLineId, updateOrder, draggablePlugin])
+
+  // Cancel all pending changes
+  const cancelPendingChanges = useCallback(() => {
+    // Revert all lines back to original prices
+    pendingChanges.forEach(change => {
+      if (draggablePlugin) {
+        draggablePlugin.updateLine(change.lineId, { price: change.oldPrice })
+      }
+    })
+    // Clear pending changes
+    setPendingChanges(new Map())
+    setTempPrices(new Map())
+  }, [pendingChanges, draggablePlugin])
+
+  // Cancel a single pending change
+  const cancelSingleChange = useCallback((lineId: string) => {
+    const change = pendingChanges.get(lineId)
+    if (change && draggablePlugin) {
+      // Revert the line back to original price
+      draggablePlugin.updateLine(change.lineId, { price: change.oldPrice })
+    }
+    
+    // Remove from pending changes
+    setPendingChanges(prev => {
+      const newMap = new Map(prev)
+      newMap.delete(lineId)
+      return newMap
+    })
+    
+    // Remove from temp prices
+    setTempPrices(prev => {
+      const newMap = new Map(prev)
+      newMap.delete(lineId)
+      return newMap
+    })
+  }, [pendingChanges, draggablePlugin])
 
   // Add trading lines to chart using draggable plugin
   useEffect(() => {
@@ -423,34 +596,99 @@ const FinalTradingChart = () => {
       {/* Trading Lines Legend */}
       {tradingLines.length > 0 && (
         <div className="mt-4 space-y-2">
-          <div className="flex flex-wrap gap-2">
-            {tradingLines.map((line) => (
-              <div 
-                key={line.id}
-                className="flex items-center space-x-2 px-3 py-1 bg-secondary rounded-lg text-sm"
-              >
-                <div 
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: line.color }}
-                />
-                <span className="text-secondary-foreground">
-                  {line.label}: ${line.price.toFixed(2)}
-                </span>
-                {/* Add edit button for order lines */}
-                {line.id.startsWith('order-') && (
-                  <button
-                    onClick={() => handleEditLine(line.id)}
-                    className="ml-2 p-1 hover:bg-secondary-foreground/10 rounded transition-colors"
-                    title="Edit price"
+          <div className="flex items-center justify-between">
+            <div className="flex flex-wrap gap-2">
+              {tradingLines.map((line) => {
+                const tempPrice = tempPrices.get(line.id)
+                const hasPendingChange = pendingChanges.has(line.id)
+                const displayPrice = tempPrice || line.price
+                
+                return (
+                  <div 
+                    key={line.id}
+                    className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-sm transition-all ${
+                      hasPendingChange ? 'bg-orange-500/20 border border-orange-500/50' : 'bg-secondary'
+                    }`}
                   >
-                    <Edit3 className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                  </button>
-                )}
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: line.color }}
+                    />
+                    <span className={`${
+                      hasPendingChange ? 'text-orange-400 font-medium' : 'text-secondary-foreground'
+                    }`}>
+                      {line.label}: ${displayPrice.toFixed(2)}
+                      {hasPendingChange && (
+                        <span className="text-xs text-muted-foreground ml-1">
+                          (was ${line.price.toFixed(2)})
+                        </span>
+                      )}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {/* Add edit button for order lines */}
+                      {line.id.startsWith('order-') && !hasPendingChange && (
+                        <>
+                          <button
+                            onClick={() => handleEditLine(line.id)}
+                            className="p-1 hover:bg-secondary-foreground/10 rounded transition-colors"
+                            title="Edit price"
+                          >
+                            <Edit3 className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                          </button>
+                          {/* Cancel button for individual lines (not for entry) */}
+                          {!line.id.includes('-entry') && (
+                            <button
+                              onClick={() => handleCancelLine(line.id)}
+                              className="p-1 hover:bg-red-500/20 rounded transition-colors group"
+                              title="Cancel this line"
+                            >
+                              <XCircle className="h-3 w-3 text-muted-foreground group-hover:text-red-400" />
+                            </button>
+                          )}
+                        </>
+                      )}
+                      {/* Add cancel button for pending changes */}
+                      {hasPendingChange && (
+                        <button
+                          onClick={() => cancelSingleChange(line.id)}
+                          className="p-1 hover:bg-red-500/20 rounded transition-colors group"
+                          title="Cancel this change"
+                        >
+                          <X className="h-3 w-3 text-orange-400 group-hover:text-red-400" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            
+            {/* Apply/Cancel Panel */}
+            {pendingChanges.size > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                <span className="text-sm text-orange-400 mr-2">
+                  {pendingChanges.size} pending change{pendingChanges.size > 1 ? 's' : ''}
+                </span>
+                <button
+                  onClick={cancelPendingChanges}
+                  className="flex items-center gap-1 px-3 py-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md text-sm font-medium transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                  Cancel
+                </button>
+                <button
+                  onClick={applyPendingChanges}
+                  className="flex items-center gap-1 px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-medium transition-colors"
+                >
+                  <Check className="h-3 w-3" />
+                  Apply
+                </button>
               </div>
-            ))}
+            )}
           </div>
+          
           <p className="text-xs text-muted-foreground text-center">
-            🖱️ Drag any trading line on the chart to modify its price, or click the edit button
+            🖱️ Drag lines on the chart to modify prices | ✏️ Edit price | ⊗ Cancel line (except entry)
           </p>
         </div>
       )}

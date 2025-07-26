@@ -182,15 +182,24 @@ class BracketOrderService:
         if order.status != OrderStatus.PENDING:
             return None
         
-        # Update allowed fields
-        if updates.entry_price is not None:
-            order.entry_price = updates.entry_price
+        # Get the update dict with only set fields
+        update_dict = updates.dict(exclude_unset=True)
+        print(f"Updating order {order_id} with updates: {update_dict}")
+        print(f"Order before update - stop_loss: {order.stop_loss_price}, tp_levels: {order.take_profit_levels}")
         
-        if updates.stop_loss_price is not None:
-            order.stop_loss_price = updates.stop_loss_price
+        # Update only the fields that were explicitly set
+        if 'entry_price' in update_dict:
+            order.entry_price = update_dict['entry_price']
         
-        if updates.take_profit_levels is not None:
-            order.take_profit_levels = updates.take_profit_levels
+        if 'stop_loss_price' in update_dict:
+            # Allow setting to None to remove stop loss
+            order.stop_loss_price = update_dict['stop_loss_price']
+        
+        if 'take_profit_levels' in update_dict:
+            # Allow setting to empty list or new values
+            order.take_profit_levels = update_dict['take_profit_levels'] if update_dict['take_profit_levels'] is not None else []
+        
+        print(f"Order after update - stop_loss: {order.stop_loss_price}, tp_levels: {order.take_profit_levels}")
         
         # Re-validate after updates
         order_create = BracketOrderCreate(

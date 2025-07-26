@@ -8,7 +8,7 @@ interface BracketOrderState {
   
   // Actions
   addOrder: (order: BracketOrderResponse) => void
-  updateOrder: (orderId: string, updates: Partial<BracketOrderResponse>) => void
+  updateOrder: (orderId: string, updates: Partial<BracketOrderResponse> | BracketOrderResponse) => void
   removeOrder: (orderId: string) => void
   setOrders: (orders: BracketOrderResponse[]) => void
   
@@ -30,11 +30,19 @@ export const useBracketOrderStore = create<BracketOrderState>((set, get) => ({
     }))
   },
 
-  updateOrder: (orderId: string, updates: Partial<BracketOrderResponse>) => {
+  updateOrder: (orderId: string, updates: Partial<BracketOrderResponse> | BracketOrderResponse) => {
     set((state) => ({
-      orders: state.orders.map(order =>
-        order.id === orderId ? { ...order, ...updates } : order
-      )
+      orders: state.orders.map(order => {
+        if (order.id === orderId) {
+          // If updates has an 'id' field, it's a full order replacement
+          if ('id' in updates && updates.id === orderId) {
+            return updates as BracketOrderResponse
+          }
+          // Otherwise, merge the updates
+          return { ...order, ...updates }
+        }
+        return order
+      })
     }))
   },
 

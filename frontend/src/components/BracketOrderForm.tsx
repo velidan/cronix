@@ -36,7 +36,7 @@ const bracketOrderSchema = z.object({
 })
 
 const BracketOrderForm = () => {
-  const { currentSymbol, addTradingLine, removeTradingLine } = useTradingStore()
+  const { currentSymbol } = useTradingStore()
   const { addOrder } = useBracketOrderStore()
   const [showAdvanced, setShowAdvanced] = useState(false)
   const queryClient = useQueryClient()
@@ -81,9 +81,6 @@ const BracketOrderForm = () => {
       // Add to bracket order store
       addOrder(data)
       
-      // Add trading lines to chart
-      addOrderLinesToChart(data)
-      
       // Reset form
       reset({
         symbol: currentSymbol,
@@ -103,51 +100,6 @@ const BracketOrderForm = () => {
     },
   })
 
-  const addOrderLinesToChart = (order: any) => {
-    const lineId = `order-${order.id}`
-    
-    // Clear any existing lines for this order
-    removeTradingLine(`${lineId}-entry`)
-    removeTradingLine(`${lineId}-stop`)
-    removeTradingLine(`${lineId}-tp1`)
-    removeTradingLine(`${lineId}-tp2`)
-
-    // Add entry line
-    if (order.entry_price) {
-      addTradingLine({
-        id: `${lineId}-entry`,
-        type: 'entry',
-        price: parseFloat(order.entry_price),
-        color: '#3b82f6',
-        label: `Entry: ${order.side.toUpperCase()}`,
-        draggable: false,
-      })
-    }
-
-    // Add stop loss line
-    if (order.stop_loss_price) {
-      addTradingLine({
-        id: `${lineId}-stop`,
-        type: 'stop-loss',
-        price: parseFloat(order.stop_loss_price),
-        color: '#ef4444',
-        label: 'Stop Loss',
-        draggable: false,
-      })
-    }
-
-    // Add take profit lines
-    order.take_profit_levels?.forEach((tp: any, index: number) => {
-      addTradingLine({
-        id: `${lineId}-tp${index + 1}`,
-        type: index === 0 ? 'take-profit-1' : 'take-profit-2',
-        price: parseFloat(tp.price),
-        color: index === 0 ? '#10b981' : '#06b6d4',
-        label: `TP${index + 1}: ${tp.quantity}`,
-        draggable: false,
-      })
-    })
-  }
 
   const onSubmit = (data: BracketOrderFormData) => {
     console.log('Form data:', data)

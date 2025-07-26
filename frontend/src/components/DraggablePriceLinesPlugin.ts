@@ -297,13 +297,14 @@ export class DraggablePriceLinesPlugin {
   }
 
   private createPriceLine(id: string, line: DraggablePriceLine): void {
+    const isDragging = this.isDragging && this.dragLineId === id
     const priceLine = this.series.createPriceLine({
       price: line.price,
-      color: line.color,
-      lineWidth: line.lineWidth,
+      color: line.color, // Keep original color
+      lineWidth: isDragging ? 3 : line.lineWidth, // Thicker when dragging
       lineStyle: line.lineStyle,
       axisLabelVisible: true,
-      title: line.title
+      title: line.title // Remove price from title
     })
     
     this.priceLines.set(id, priceLine)

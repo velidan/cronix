@@ -82,6 +82,14 @@ class BracketOrderUpdate(BaseModel):
     entry_price: Optional[Decimal] = None
     stop_loss_price: Optional[Decimal] = None
     take_profit_levels: Optional[List[TakeProfitLevel]] = None
+    
+    class Config:
+        # Only include fields that are explicitly set
+        fields = {
+            'entry_price': {'exclude_unset': True},
+            'stop_loss_price': {'exclude_unset': True},
+            'take_profit_levels': {'exclude_unset': True}
+        }
 
 class BracketOrderValidationError(Exception):
     """Custom exception for bracket order validation errors"""

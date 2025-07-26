@@ -17,6 +17,7 @@ interface TradingState {
   addTradingLine: (line: TradingLine) => void
   updateTradingLine: (id: string, updates: Partial<TradingLine>) => void
   removeTradingLine: (id: string) => void
+  setTradingLines: (lines: TradingLine[]) => void
   setChartData: (data: CandlestickData[]) => void
   updateLastCandle: (candle: CandlestickData) => void
   setLoading: (loading: boolean) => void
@@ -57,6 +58,10 @@ export const useTradingStore = create<TradingState>((set, get) => ({
     set((state) => ({
       tradingLines: state.tradingLines.filter(line => line.id !== id)
     }))
+  },
+
+  setTradingLines: (lines: TradingLine[]) => {
+    set({ tradingLines: lines })
   },
 
   setChartData: (data: CandlestickData[]) => {
