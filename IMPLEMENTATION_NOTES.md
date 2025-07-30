@@ -105,29 +105,47 @@ BracketOrderForm.tsx
 
 ## 🔄 For Next Session
 
-### CRITICAL ISSUE TO SOLVE TOMORROW ⚠️
-**CHART PANNING BUG**: After dragging a trading line and releasing it, the chart continues to pan/move with the mouse cursor as if the user is still holding down the mouse button. This makes the interface unusable.
+### COMPLETED TODAY ✅
+**CHART PANNING BUG**: Fixed! The issue was resolved by:
+1. Properly managing chart interaction state during drag operations
+2. Using `disableChartInteractions()` and `enableChartInteractions()` methods
+3. Forcing chart update with synthetic mouse event after drag ends
+4. Removing `stopPropagation()` calls that were interfering with chart's event system
 
-**Attempted Solutions (ALL FAILED)**:
-1. ✗ Event propagation control (`preventDefault`, `stopPropagation`, `stopImmediatePropagation`)
-2. ✗ Proper event listener binding and cleanup (using bound methods)
-3. ✗ Global mouse up listeners to catch releases outside chart
-4. ✗ Disabling chart options (`handleScroll: false`, `handleScale: false`) during drag
-5. ✗ DOM pointer events manipulation (`pointerEvents: 'none'`)
+**ORDER MANAGEMENT**: Implemented comprehensive order and line management:
+1. Redesigned Trading Controls to show orders instead of individual lines
+2. Added ability to cancel individual lines (SL, TP1, TP2)
+3. Fixed bug where canceling TP would also remove stop loss
+4. Fixed 500 errors when deleting non-existent orders
 
-**Research Areas for Tomorrow**:
-- TradingView Lightweight Charts interaction system internals
-- Alternative drag implementation approaches (custom overlay, different event handling)
-- Chart container event bubbling issues
-- Mouse capture/release patterns for chart libraries
+### TOMORROW'S PRIORITY FEATURE 🎯
+**RE-ADD CANCELLED LINES**: After canceling SL/TP1/TP2, users need ability to add them back.
 
-**Files Involved**:
-- `/frontend/src/components/DraggablePriceLinesPlugin.ts` (main plugin)
-- `/frontend/src/components/FinalTradingChart.tsx` (integration)
+**UX Options to Consider**:
+1. **Option 1 - Order Card Buttons**: Add "+" buttons in order card for missing lines
+   - Pros: Clear, discoverable, follows existing UI patterns
+   - Cons: Requires modal/input for price entry
 
-### Priority 1: System Improvements
+2. **Option 2 - Chart Right-Click**: Right-click on chart to add line at that price
+   - Pros: Direct price selection, intuitive for traders
+   - Cons: Not mobile-friendly, less discoverable
+
+3. **Option 3 - Floating Action Button**: FAB with line type selection
+   - Pros: Always accessible, mobile-friendly
+   - Cons: Additional UI element, requires price input
+
+4. **Option 4 - Order Edit Mode**: Toggle edit mode with checkboxes
+   - Pros: Batch operations, clear state
+   - Cons: More complex interaction model
+
+**Technical Requirements**:
+- New API endpoint to add individual lines to existing orders
+- Validation logic (SL below/above entry based on side)
+- Real-time chart update when lines are added
+- Maintain order integrity and validation rules
+
+### Priority 2: System Improvements
 1. **Fix Authentication**: Re-enable and fix bracket order auth
-2. **Order Management**: Add order list and cancellation UI
-3. **Real KuCoin**: Connect to actual KuCoin API
-4. **Database**: Add PostgreSQL for order persistence
-5. **WebSocket**: Real-time order updates
+2. **Real KuCoin**: Connect to actual KuCoin API
+3. **Database**: Add PostgreSQL for order persistence
+4. **WebSocket**: Real-time order updates

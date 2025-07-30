@@ -72,14 +72,35 @@
   - [x] Complete backend API with validation
   - [x] Professional frontend form with BUY/SELL toggles
 
-### ⏳ PENDING HIGH PRIORITY - PHASE 3
+### ✅ COMPLETED TASKS - PHASE 3 (INTERACTIVE TRADING)
+- [x] **Interactive Trading Lines**: Draggable chart line functionality
+  - [x] Implement draggable trading lines on chart
+  - [x] Real-time price updates during drag
+  - [x] Apply/Cancel panel for pending changes (better UX than popup)
+  - [x] Integrate line drag updates with bracket order modification API
+  - [x] Validate new prices on drag (maintain order logic)
+  - [x] Update order in backend when user confirms changes
+- [x] **Order Management UI**: Improved order and line management
+  - [x] Redesigned Trading Controls to show orders instead of individual lines
+  - [x] Delete entire orders with trash icon
+  - [x] Cancel individual lines (SL, TP1, TP2) with cross icon
+  - [x] Edit individual line prices with edit icon
+  - [x] Fixed bug where canceling TP also removed stop loss
+  - [x] Fixed 500 errors for non-existent orders
+  - [x] Proper authentication bypass for testing
 
-- [ ] **Interactive Trading Lines**: Draggable chart line functionality
-  - [ ] Implement draggable trading lines on chart
-  - [ ] Add confirmation popup when dragging stops (Apply/Cancel)
-  - [ ] Integrate line drag updates with bracket order modification API
-  - [ ] Validate new prices on drag (maintain order logic)
-  - [ ] Update order in backend when user confirms changes
+### ⏳ PENDING HIGH PRIORITY - PHASE 4 (TOMORROW)
+
+- [ ] **Re-add Cancelled Lines**: Allow adding back SL/TP after deletion
+  - [ ] Design UX for re-adding cancelled lines (options to consider):
+    - Option 1: "Add" button in the order card for missing lines
+    - Option 2: Right-click on chart to add lines at specific price
+    - Option 3: Floating action button with line type selection
+    - Option 4: Edit mode for orders with checkboxes for each line type
+  - [ ] Implement frontend UI for re-adding lines
+  - [ ] Add API endpoint for adding individual lines to existing orders
+  - [ ] Validate that new lines maintain proper order logic (SL below/above entry, etc.)
+  - [ ] Update chart in real-time when lines are added
 
 ---
 
@@ -157,9 +178,9 @@
 
 ## 🔧 Current Session Progress
 
-**Last Updated**: 2025-07-24
-**Current Phase**: Phase 1 - COMPLETED ✅
-**Next Phase**: Phase 2 - Core Backend Implementation
+**Last Updated**: 2025-01-26
+**Current Phase**: Phase 3 - COMPLETED ✅
+**Next Phase**: Phase 4 - Re-add Cancelled Lines Feature
 
 ### Session Achievements:
 - ✅ Complete monorepo structure created and tested
@@ -167,8 +188,11 @@
 - ✅ Frontend React with TypeScript and Tailwind CSS
 - ✅ Docker Compose development environment ready
 - ✅ Full working demo with authentication (demo/demo)
-- ✅ Comprehensive documentation updated
-- ✅ All foundation components tested and validated
+- ✅ TradingView Charts with real-time updates
+- ✅ Bracket Orders with automatic chart line visualization
+- ✅ **Draggable trading lines with real-time updates**
+- ✅ **Order management UI with individual line controls**
+- ✅ **Fixed critical bugs (stop loss deletion, 500 errors)**
 
 ### What's Working Right Now:
 - **Backend**: http://localhost:8000 (FastAPI with /docs)
@@ -178,6 +202,12 @@
 - **WebSocket**: Real-time connection manager ready
 - **TradingView Charts**: Professional candlestick charts with real-time updates
 - **Bracket Orders**: Complete order system with automatic chart line visualization
+- **Interactive Trading**: 
+  - Drag lines to modify prices
+  - Apply/Cancel panel for batch updates
+  - Individual line cancellation (except entry)
+  - Edit prices via modal
+  - Delete entire orders
 
 ---
 
