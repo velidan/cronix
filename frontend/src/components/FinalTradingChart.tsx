@@ -219,7 +219,7 @@ const FinalTradingChart = () => {
             secondsVisible: false,
           },
           width: width,
-          height: 400,
+          height: 350,
         })
 
         // Add candlestick series
@@ -532,53 +532,51 @@ const FinalTradingChart = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96 bg-card rounded-lg border border-border">
+      <div className="flex items-center justify-center h-80 bg-slate-900/80 rounded-lg border border-white/10">
         <div className="text-center">
-          <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <p className="text-muted-foreground">Loading chart data...</p>
+          <Activity className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-500" />
+          <p className="text-xs text-gray-400">Loading chart data...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-card rounded-lg border border-border p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-4">
-          <h3 className="text-lg font-semibold text-foreground">
-            {currentSymbol} - {currentTimeframe}
+    <div className="bg-slate-900/80 rounded-lg border border-white/10 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-semibold text-white">
+            {currentSymbol}
           </h3>
           {chartData.length > 0 && (
-            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-              <span>O: {chartData[chartData.length - 1]?.open?.toFixed(2)}</span>
-              <span>H: {chartData[chartData.length - 1]?.high?.toFixed(2)}</span>
-              <span>L: {chartData[chartData.length - 1]?.low?.toFixed(2)}</span>
-              <span className={`font-semibold ${
+            <div className="flex items-center gap-3 text-[11px]">
+              <span className="text-gray-500">O <span className="text-gray-300">{chartData[chartData.length - 1]?.open?.toFixed(2)}</span></span>
+              <span className="text-gray-500">H <span className="text-gray-300">{chartData[chartData.length - 1]?.high?.toFixed(2)}</span></span>
+              <span className="text-gray-500">L <span className="text-gray-300">{chartData[chartData.length - 1]?.low?.toFixed(2)}</span></span>
+              <span className="text-gray-500">C <span className={`font-medium ${
                 chartData[chartData.length - 1]?.close >= chartData[chartData.length - 1]?.open 
                   ? 'text-green-400' 
                   : 'text-red-400'
-              }`}>
-                C: {chartData[chartData.length - 1]?.close?.toFixed(2)}
-              </span>
+              }`}>{chartData[chartData.length - 1]?.close?.toFixed(2)}</span></span>
             </div>
           )}
         </div>
       </div>
 
       {/* Chart Container */}
-      <div className="bg-slate-800 rounded-lg border-2 border-slate-600 relative p-2">
+      <div className="bg-slate-800 rounded border border-white/10 relative p-1">
         <div 
           ref={chartContainerRef}
           className="w-full bg-slate-900 rounded"
-          style={{ height: '400px', minHeight: '400px' }}
+          style={{ height: '350px', minHeight: '350px' }}
         />
         
         {/* Status overlay */}
         {!isChartReady && (
-          <div className="absolute inset-2 flex items-center justify-center bg-slate-800/95 rounded">
+          <div className="absolute inset-1 flex items-center justify-center bg-slate-800/95 rounded">
             <div className="text-center">
-              <Activity className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-              <p className="text-muted-foreground">
+              <Activity className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-500" />
+              <p className="text-xs text-gray-400">
                 {chartContainer ? 'Creating chart...' : 'Waiting for container...'}
               </p>
             </div>
@@ -586,18 +584,12 @@ const FinalTradingChart = () => {
         )}
       </div>
 
-      {/* Debug Info */}
-      <div className="mt-2 text-xs text-muted-foreground space-y-1">
-        <div>Container: {chartContainer ? '✅ Found' : '❌ Not Found'}</div>
-        <div>Chart Ready: {isChartReady ? '✅ Yes' : '❌ No'}</div>
-        <div>Data Points: {chartData.length}</div>
-      </div>
 
       {/* Trading Lines Legend */}
       {tradingLines.length > 0 && (
-        <div className="mt-4 space-y-2">
+        <div className="mt-2 space-y-1">
           <div className="flex items-center justify-between">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1">
               {tradingLines.map((line) => {
                 const tempPrice = tempPrices.get(line.id)
                 const hasPendingChange = pendingChanges.has(line.id)
@@ -606,43 +598,43 @@ const FinalTradingChart = () => {
                 return (
                   <div 
                     key={line.id}
-                    className={`flex items-center space-x-2 px-3 py-1 rounded-lg text-sm transition-all ${
-                      hasPendingChange ? 'bg-orange-500/20 border border-orange-500/50' : 'bg-secondary'
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-all ${
+                      hasPendingChange ? 'bg-orange-500/20 border border-orange-500/50' : 'bg-slate-800/50'
                     }`}
                   >
                     <div 
-                      className="w-3 h-3 rounded-full"
+                      className="w-2 h-2 rounded-full"
                       style={{ backgroundColor: line.color }}
                     />
                     <span className={`${
-                      hasPendingChange ? 'text-orange-400 font-medium' : 'text-secondary-foreground'
+                      hasPendingChange ? 'text-orange-400 font-medium' : 'text-gray-300'
                     }`}>
                       {line.label}: ${displayPrice.toFixed(2)}
                       {hasPendingChange && (
-                        <span className="text-xs text-muted-foreground ml-1">
+                        <span className="text-[10px] text-gray-500 ml-1">
                           (was ${line.price.toFixed(2)})
                         </span>
                       )}
                     </span>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-0.5">
                       {/* Add edit button for order lines */}
                       {line.id.startsWith('order-') && !hasPendingChange && (
                         <>
                           <button
                             onClick={() => handleEditLine(line.id)}
-                            className="p-1 hover:bg-secondary-foreground/10 rounded transition-colors"
+                            className="p-0.5 hover:bg-white/10 rounded transition-colors"
                             title="Edit price"
                           >
-                            <Edit3 className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                            <Edit3 className="h-2.5 w-2.5 text-gray-500 hover:text-white" />
                           </button>
                           {/* Cancel button for individual lines (not for entry) */}
                           {!line.id.includes('-entry') && (
                             <button
                               onClick={() => handleCancelLine(line.id)}
-                              className="p-1 hover:bg-red-500/20 rounded transition-colors group"
+                              className="p-0.5 hover:bg-red-500/20 rounded transition-colors group"
                               title="Cancel this line"
                             >
-                              <XCircle className="h-3 w-3 text-muted-foreground group-hover:text-red-400" />
+                              <XCircle className="h-2.5 w-2.5 text-gray-500 group-hover:text-red-400" />
                             </button>
                           )}
                         </>
@@ -651,10 +643,10 @@ const FinalTradingChart = () => {
                       {hasPendingChange && (
                         <button
                           onClick={() => cancelSingleChange(line.id)}
-                          className="p-1 hover:bg-red-500/20 rounded transition-colors group"
+                          className="p-0.5 hover:bg-red-500/20 rounded transition-colors group"
                           title="Cancel this change"
                         >
-                          <X className="h-3 w-3 text-orange-400 group-hover:text-red-400" />
+                          <X className="h-2.5 w-2.5 text-orange-400 group-hover:text-red-400" />
                         </button>
                       )}
                     </div>
@@ -665,30 +657,30 @@ const FinalTradingChart = () => {
             
             {/* Apply/Cancel Panel */}
             {pendingChanges.size > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/30 rounded-lg">
-                <span className="text-sm text-orange-400 mr-2">
-                  {pendingChanges.size} pending change{pendingChanges.size > 1 ? 's' : ''}
+              <div className="flex items-center gap-1 px-2 py-1 bg-orange-500/10 border border-orange-500/30 rounded">
+                <span className="text-xs text-orange-400 mr-1">
+                  {pendingChanges.size} change{pendingChanges.size > 1 ? 's' : ''}
                 </span>
                 <button
                   onClick={cancelPendingChanges}
-                  className="flex items-center gap-1 px-3 py-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md text-sm font-medium transition-colors"
+                  className="flex items-center gap-0.5 px-2 py-0.5 bg-slate-700 hover:bg-slate-600 text-gray-300 rounded text-xs font-medium transition-colors"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-2.5 w-2.5" />
                   Cancel
                 </button>
                 <button
                   onClick={applyPendingChanges}
-                  className="flex items-center gap-1 px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-medium transition-colors"
+                  className="flex items-center gap-0.5 px-2 py-0.5 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-medium transition-colors"
                 >
-                  <Check className="h-3 w-3" />
+                  <Check className="h-2.5 w-2.5" />
                   Apply
                 </button>
               </div>
             )}
           </div>
           
-          <p className="text-xs text-muted-foreground text-center">
-            🖱️ Drag lines on the chart to modify prices | ✏️ Edit price | ⊗ Cancel line (except entry)
+          <p className="text-[10px] text-gray-500 text-center">
+            🖱️ Drag lines to modify | ✏️ Edit | ⊗ Cancel line
           </p>
         </div>
       )}

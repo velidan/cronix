@@ -136,56 +136,56 @@ const BracketOrderForm = () => {
   }
 
   return (
-    <div className="trading-card">
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="text-lg font-semibold text-foreground">Bracket Order</h4>
+    <div className="bg-slate-900/80 rounded-lg border border-white/10 p-3">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-semibold text-white">Bracket Order</h4>
         <button
           type="button"
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="text-sm text-primary hover:text-primary/80"
+          className="text-xs text-blue-400 hover:text-blue-300"
         >
           {showAdvanced ? 'Simple' : 'Advanced'}
         </button>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         {/* Order Type Toggle */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-1">
           <button
             type="button"
             onClick={() => setValue('side', OrderSide.BUY)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded font-medium text-xs transition-colors ${
               watchedValues.side === OrderSide.BUY
                 ? 'bg-green-600 text-white'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                : 'bg-slate-800 text-gray-400 hover:text-white'
             }`}
           >
-            <TrendingUp className="h-4 w-4 inline mr-2" />
+            <TrendingUp className="h-3 w-3 inline mr-1" />
             BUY
           </button>
           <button
             type="button"
             onClick={() => setValue('side', OrderSide.SELL)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded font-medium text-xs transition-colors ${
               watchedValues.side === OrderSide.SELL
                 ? 'bg-red-600 text-white'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                : 'bg-slate-800 text-gray-400 hover:text-white'
             }`}
           >
-            <TrendingDown className="h-4 w-4 inline mr-2" />
+            <TrendingDown className="h-3 w-3 inline mr-1" />
             SELL
           </button>
         </div>
 
         {/* Entry Type Toggle */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-1">
           <button
             type="button"
             onClick={() => setValue('entry_type', EntryType.MARKET)}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               watchedValues.entry_type === EntryType.MARKET
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-800 text-gray-400 hover:text-white'
             }`}
           >
             Market
@@ -193,10 +193,10 @@ const BracketOrderForm = () => {
           <button
             type="button"
             onClick={() => setValue('entry_type', EntryType.LIMIT)}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
               watchedValues.entry_type === EntryType.LIMIT
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-800 text-gray-400 hover:text-white'
             }`}
           >
             Limit
@@ -205,7 +205,7 @@ const BracketOrderForm = () => {
 
         {/* Quantity */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label className="block text-xs font-medium text-gray-300 mb-1">
             Quantity
           </label>
           <input
@@ -213,17 +213,17 @@ const BracketOrderForm = () => {
             type="number"
             step="0.000001"
             placeholder="0.001"
-            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full px-2 py-1.5 bg-slate-800 border border-white/10 rounded text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           {errors.quantity && (
-            <p className="text-destructive text-sm mt-1">{errors.quantity.message}</p>
+            <p className="text-red-400 text-xs mt-0.5">{errors.quantity.message}</p>
           )}
         </div>
 
         {/* Entry Price (only for limit orders) */}
         {watchedValues.entry_type === EntryType.LIMIT && (
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
+            <label className="block text-xs font-medium text-gray-300 mb-1">
               Entry Price
             </label>
             <input
@@ -231,18 +231,18 @@ const BracketOrderForm = () => {
               type="number"
               step="0.01"
               placeholder="45000.00"
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-2 py-1.5 bg-slate-800 border border-white/10 rounded text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             {errors.entry_price && (
-              <p className="text-destructive text-sm mt-1">{errors.entry_price.message}</p>
+              <p className="text-red-400 text-xs mt-0.5">{errors.entry_price.message}</p>
             )}
           </div>
         )}
 
         {/* Stop Loss */}
         <div>
-          <label className="flex items-center text-sm font-medium text-foreground mb-1">
-            <AlertTriangle className="h-4 w-4 mr-1 text-red-400" />
+          <label className="flex items-center text-xs font-medium text-gray-300 mb-1">
+            <AlertTriangle className="h-3 w-3 mr-1 text-red-400" />
             Stop Loss Price (Optional)
           </label>
           <input
@@ -250,30 +250,30 @@ const BracketOrderForm = () => {
             type="number"
             step="0.01"
             placeholder="40000.00"
-            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full px-2 py-1.5 bg-slate-800 border border-white/10 rounded text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
 
         {/* Take Profit 1 */}
         <div>
-          <label className="flex items-center text-sm font-medium text-foreground mb-1">
-            <Target className="h-4 w-4 mr-1 text-green-400" />
+          <label className="flex items-center text-xs font-medium text-gray-300 mb-1">
+            <Target className="h-3 w-3 mr-1 text-green-400" />
             Take Profit 1 (Optional)
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1">
             <input
               {...register('take_profit_1_price')}
               type="number"
               step="0.01"
               placeholder="Price"
-              className="px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="px-2 py-1.5 bg-slate-800 border border-white/10 rounded text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <input
               {...register('take_profit_1_quantity')}
               type="number"
               step="0.000001"
               placeholder="Quantity"
-              className="px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="px-2 py-1.5 bg-slate-800 border border-white/10 rounded text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -281,24 +281,24 @@ const BracketOrderForm = () => {
         {/* Take Profit 2 (Advanced) */}
         {showAdvanced && (
           <div>
-            <label className="flex items-center text-sm font-medium text-foreground mb-1">
-              <DollarSign className="h-4 w-4 mr-1 text-cyan-400" />
+            <label className="flex items-center text-xs font-medium text-gray-300 mb-1">
+              <DollarSign className="h-3 w-3 mr-1 text-cyan-400" />
               Take Profit 2 (Optional)
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-1">
               <input
                 {...register('take_profit_2_price')}
                 type="number"
                 step="0.01"
                 placeholder="Price"
-                className="px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className="px-2 py-1.5 bg-slate-800 border border-white/10 rounded text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <input
                 {...register('take_profit_2_quantity')}
                 type="number"
                 step="0.000001"
                 placeholder="Quantity"
-                className="px-3 py-2 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className="px-2 py-1.5 bg-slate-800 border border-white/10 rounded text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -308,13 +308,13 @@ const BracketOrderForm = () => {
         <button
           type="submit"
           disabled={createOrderMutation.isPending}
-          className={`w-full px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center ${
+          className={`w-full px-3 py-2 rounded font-medium text-xs transition-colors flex items-center justify-center ${
             watchedValues.side === OrderSide.BUY
               ? 'bg-green-600 hover:bg-green-700 text-white'
               : 'bg-red-600 hover:bg-red-700 text-white'
           } disabled:opacity-50`}
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-3 w-3 mr-1" />
           {createOrderMutation.isPending
             ? 'Creating Order...'
             : `Place ${watchedValues.side?.toUpperCase()} Order`}
@@ -322,7 +322,7 @@ const BracketOrderForm = () => {
 
         {/* Error Display */}
         {createOrderMutation.error && (
-          <div className="bg-destructive/10 border border-destructive text-destructive-foreground px-4 py-3 rounded">
+          <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-2 py-1.5 rounded text-xs">
             {(createOrderMutation.error as any)?.response?.data?.detail || 
              'Failed to create bracket order'}
           </div>

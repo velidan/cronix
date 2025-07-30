@@ -4,9 +4,69 @@ import { useBracketOrderStore } from '../store/bracketOrderStore'
 import { bracketOrdersApi } from '../services/bracketOrders'
 import { generateDemoChartData, generatePriceUpdate } from '../utils/chartData'
 import FinalTradingChart from '../components/FinalTradingChart'
-import TradingControls from '../components/TradingControls'
+import TradingToolbar from '../components/TradingToolbar'
 import BracketOrderForm from '../components/BracketOrderForm'
 import { useOrderTradingLines } from '../hooks/useOrderTradingLines'
+import { Trash2 } from 'lucide-react'
+import { BracketOrder } from '../types/bracketOrder'
+
+// OrderCard Component
+const OrderCard = ({ order }: { order: BracketOrder }) => {
+  const { removeOrder } = useBracketOrderStore()
+  
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      await bracketOrdersApi.cancel(orderId)
+      removeOrder(orderId)
+    } catch (error) {
+      console.error('Failed to delete order:', error)
+      alert('Failed to delete order. Please try again.')
+    }
+  }
+
+  return (
+    <div className="p-2 bg-slate-800/50 rounded border border-white/5">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-medium ${
+            order.side === 'buy' ? 'text-green-400' : 'text-red-400'
+          }`}>
+            {order.side.toUpperCase()}
+          </span>
+          <span className="text-xs text-gray-400">{order.symbol}</span>
+          <span className="text-xs text-gray-500">Qty: {order.quantity}</span>
+        </div>
+        <button
+          onClick={() => handleDeleteOrder(order.id)}
+          className="text-red-400 hover:text-red-300 p-0.5 rounded"
+          title="Delete order"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      </div>
+      <div className="space-y-0.5 text-xs">
+        {order.entry_price && (
+          <div className="flex items-center justify-between text-gray-500">
+            <span>Entry:</span>
+            <span>${Number(order.entry_price).toFixed(2)}</span>
+          </div>
+        )}
+        {order.stop_loss_price && (
+          <div className="flex items-center justify-between text-gray-500">
+            <span>SL:</span>
+            <span>${Number(order.stop_loss_price).toFixed(2)}</span>
+          </div>
+        )}
+        {order.take_profit_levels?.map((tp, index) => (
+          <div key={index} className="flex items-center justify-between text-gray-500">
+            <span>TP{index + 1}:</span>
+            <span>${Number(tp.price).toFixed(2)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 const Trading = () => {
   const { 
@@ -18,7 +78,7 @@ const Trading = () => {
     setLoading 
   } = useTradingStore()
 
-  const { setOrders } = useBracketOrderStore()
+  const { orders, setOrders, removeOrder } = useBracketOrderStore()
 
   // Sync orders with trading lines
   useOrderTradingLines()
@@ -66,22 +126,39 @@ const Trading = () => {
   }, [chartData, currentSymbol, updateLastCandle])
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Trading Terminal</h1>
-        <p className="text-muted-foreground">Advanced charting with trading lines</p>
+    <div className="space-y-4">
+      <div className="px-3 py-2">
+        <h1 className="text-xl font-bold text-white">Trading Terminal</h1>
+        <p className="text-xs text-gray-400">Advanced charting with trading lines</p>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        {/* Chart - Takes 3/4 of the width */}
-        <div className="xl:col-span-3">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+        {/* Chart Section - Takes 3/4 of the width */}
+        <div className="xl:col-span-3 space-y-0">
+          {/* Trading Toolbar */}
+          <TradingToolbar />
+          
+          {/* Chart Widget */}
           <FinalTradingChart />
         </div>
         
-        {/* Controls - Takes 1/4 of the width */}
-        <div className="xl:col-span-1 space-y-6">
+        {/* Control Panel - Takes 1/4 of the width */}
+        <div className="xl:col-span-1 space-y-4">
           <BracketOrderForm />
-          <TradingControls />
+          
+          {/* Active Orders */}
+          <div className="bg-slate-900/80 rounded-lg border border-white/10 p-3">
+            <h4 className="text-sm font-semibold text-white mb-3">Active Orders</h4>
+            {orders.length > 0 ? (
+              <div className="space-y-2">
+                {orders.map((order) => (
+                  <OrderCard key={order.id} order={order} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 text-center py-4">No active orders</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
