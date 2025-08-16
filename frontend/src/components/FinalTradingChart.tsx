@@ -5,6 +5,8 @@ import { bracketOrdersApi } from '../services/bracketOrders'
 import PriceEditModal from './PriceEditModal'
 import { Activity, Edit3, Check, X, XCircle } from 'lucide-react'
 import DraggablePriceLinesPlugin from './DraggablePriceLinesPlugin'
+import { useToast } from '../contexts/ToastContext'
+import { validatePriceUpdate, validateBracketOrderPrices } from '../utils/priceValidation'
 
 const FinalTradingChart = () => {
   const [chartContainer, setChartContainer] = useState<HTMLDivElement | null>(null)
@@ -47,6 +49,8 @@ const FinalTradingChart = () => {
     addOrderLine,
     removeOrderLine 
   } = useBracketOrderStore()
+  
+  const toast = useToast()
   
 
   // Handle edit button click for trading lines
@@ -134,7 +138,7 @@ const FinalTradingChart = () => {
           break
         case 'entry':
           // Can't cancel entry line - it's required
-          alert("Entry line cannot be cancelled. Delete the entire order instead.")
+          toast.warning("Cannot Cancel Entry", "Entry line cannot be cancelled. Delete the entire order instead.")
           return
       }
 
@@ -149,13 +153,18 @@ const FinalTradingChart = () => {
       console.log('Stop loss in response:', updatedOrder.stop_loss_price)
       updateOrder(order.id, updatedOrder)
       
-      console.log('Line cancelled successfully')
+      // Show success toast
+      const lineTypeDisplay = lineType === 'stop' ? 'Stop Loss' : 
+                             lineType === 'tp1' ? 'Take Profit 1' :
+                             lineType === 'tp2' ? 'Take Profit 2' : lineType.toUpperCase()
+      toast.success('Line Cancelled', `${lineTypeDisplay} has been removed`)
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to cancel line:', error)
-      alert('Failed to cancel line. Please try again.')
+      const errorMessage = error?.response?.data?.detail || 'Failed to cancel line. Please try again.'
+      toast.error('Cancellation Failed', errorMessage)
     }
-  }, [getOrderByLineId, updateOrder])
+  }, [getOrderByLineId, updateOrder, toast])
 
   // Callback ref to get the container element
   const chartContainerRef = useCallback((node: HTMLDivElement | null) => {
@@ -289,7 +298,25 @@ const FinalTradingChart = () => {
     if (!editingLine) return
 
     try {
-      const { orderId, lineType } = editingLine
+      const { orderId, lineType, lineId } = editingLine
+      const { order } = getOrderByLineId(lineId)
+      if (!order) return
+
+      // Validate the price update
+      const tpPrices = order.take_profit_levels?.map(tp => tp.price) || []
+      const validation = validatePriceUpdate(
+        order.side,
+        lineType as 'entry' | 'stop' | 'tp1' | 'tp2',
+        newPrice,
+        order.entry_price || 0,
+        order.stop_loss_price,
+        tpPrices
+      )
+
+      if (!validation.isValid) {
+        toast.error('Invalid Price', validation.error)
+        return
+      }
 
       // Build update payload based on line type
       const updates: any = {}
@@ -303,9 +330,22 @@ const FinalTradingChart = () => {
         case 'tp1':
         case 'tp2':
           // For take profits, we need to update the take_profit_levels array
-          // This requires getting the full order and updating the specific level
-          console.log('Take profit updates not yet implemented')
-          return
+          const tpIndex = lineType === 'tp1' ? 0 : 1
+          const currentLevels = [...(order.take_profit_levels || [])]
+          
+          // Ensure the array has enough elements
+          while (currentLevels.length <= tpIndex) {
+            currentLevels.push({ price: 0, quantity: 0 })
+          }
+          
+          // Update the specific level's price
+          currentLevels[tpIndex] = {
+            ...currentLevels[tpIndex],
+            price: newPrice
+          }
+          
+          updates.take_profit_levels = currentLevels
+          break
       }
 
       // Call API to update order
@@ -314,17 +354,23 @@ const FinalTradingChart = () => {
       // Update local state
       updateOrder(orderId, updates)
       
-      console.log('Price updated successfully:', lineType, newPrice)
+      // Show success toast
+      toast.success('Price Updated', `${lineType.toUpperCase()} price updated to $${newPrice.toFixed(2)}`)
       
       // Close modal
       setEditingLine(null)
       setShowPriceModal(false)
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update price:', error)
+      
+      // Parse error message from API
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to update price'
+      toast.error('Update Failed', errorMessage)
+      
       throw error
     }
-  }, [editingLine, updateOrder])
+  }, [editingLine, updateOrder, getOrderByLineId, toast])
 
   // Handle price drag end event
   const handlePriceDragEnd = useCallback((lineId: string, oldPrice: number, newPrice: number) => {
@@ -341,14 +387,33 @@ const FinalTradingChart = () => {
       return
     }
 
-    // Store the pending change
+    // Get the actual saved price from the order (not the last drag position)
+    let savedPrice = oldPrice
+    switch (lineType) {
+      case 'entry':
+        savedPrice = Number(order.entry_price) || oldPrice
+        break
+      case 'stop':
+        savedPrice = Number(order.stop_loss_price) || oldPrice
+        break
+      case 'tp1':
+        savedPrice = Number(order.take_profit_levels?.[0]?.price) || oldPrice
+        break
+      case 'tp2':
+        savedPrice = Number(order.take_profit_levels?.[1]?.price) || oldPrice
+        break
+    }
+
+    // Store the pending change with the actual saved price
     setPendingChanges(prev => {
       const newMap = new Map(prev)
+      // Check if we already have a pending change for this line
+      const existingChange = prev.get(lineId)
       newMap.set(lineId, {
         lineId,
         lineType,
         orderId: order.id,
-        oldPrice,
+        oldPrice: existingChange?.oldPrice ?? savedPrice, // Keep original saved price
         newPrice
       })
       return newMap
@@ -367,6 +432,9 @@ const FinalTradingChart = () => {
     const changes = Array.from(pendingChanges.values())
     if (changes.length === 0) return
 
+    let successfulUpdates = 0
+    let failedUpdates = 0
+
     try {
       // Group changes by order ID to make batch updates
       const changesByOrder = new Map<string, typeof changes>()
@@ -384,27 +452,62 @@ const FinalTradingChart = () => {
         // Build update payload
         const updates: any = {}
         let takeProfitLevels = order.take_profit_levels ? [...order.take_profit_levels] : []
+        
+        // Collect all new prices for validation
+        let newEntryPrice = order.entry_price || 0
+        let newStopLoss = order.stop_loss_price
+        let newTpPrices = takeProfitLevels.map(tp => tp.price)
 
         orderChanges.forEach(change => {
           switch (change.lineType) {
             case 'entry':
               updates.entry_price = change.newPrice
+              newEntryPrice = change.newPrice
               break
             case 'stop':
               updates.stop_loss_price = change.newPrice
+              newStopLoss = change.newPrice
               break
             case 'tp1':
               if (takeProfitLevels.length > 0) {
                 takeProfitLevels[0] = { ...takeProfitLevels[0], price: change.newPrice }
+                newTpPrices[0] = change.newPrice
               }
               break
             case 'tp2':
               if (takeProfitLevels.length > 1) {
                 takeProfitLevels[1] = { ...takeProfitLevels[1], price: change.newPrice }
+                newTpPrices[1] = change.newPrice
               }
               break
           }
         })
+
+        // Validate all prices before making the API call
+        const validation = validateBracketOrderPrices(
+          order.side,
+          newEntryPrice,
+          newStopLoss,
+          newTpPrices.filter(price => price > 0)
+        )
+
+        if (!validation.isValid) {
+          // Show error toast
+          toast.error('Invalid Price Configuration', validation.error)
+          
+          // Revert all dragged lines for this order
+          orderChanges.forEach(change => {
+            if (draggablePlugin) {
+              draggablePlugin.updateLine(change.lineId, { price: Number(change.oldPrice) })
+            }
+            // Remove from pending changes
+            pendingChanges.delete(change.lineId)
+          })
+          
+          failedUpdates++
+          // Skip this order and continue with others
+          continue
+        }
 
         // Add take profit levels if they were modified
         if (orderChanges.some(c => c.lineType === 'tp1' || c.lineType === 'tp2')) {
@@ -418,27 +521,45 @@ const FinalTradingChart = () => {
         
         // Update local state with the response from server
         updateOrder(orderId, updatedOrder)
+        
+        // Remove successfully updated changes from pending
+        orderChanges.forEach(change => {
+          pendingChanges.delete(change.lineId)
+        })
+        
+        successfulUpdates++
       }
       
-      // Clear pending changes
+      // Clear remaining pending changes (should be empty if all succeeded)
       setPendingChanges(new Map())
       setTempPrices(new Map())
-      console.log('All changes applied successfully')
       
-    } catch (error) {
+      // Show appropriate toast based on results
+      if (successfulUpdates > 0 && failedUpdates === 0) {
+        toast.success('Prices Updated', 'All order prices have been successfully updated')
+      } else if (successfulUpdates > 0 && failedUpdates > 0) {
+        toast.warning('Partial Update', `${successfulUpdates} order(s) updated, ${failedUpdates} failed validation`)
+      }
+      // If all failed, the error toasts have already been shown
+      
+    } catch (error: any) {
       console.error('Failed to apply changes:', error)
+      
+      // Parse error message
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to update order prices'
+      toast.error('Update Failed', errorMessage)
+      
       // Revert all lines back to original prices
       pendingChanges.forEach(change => {
         if (draggablePlugin) {
-          draggablePlugin.updateLine(change.lineId, { price: change.oldPrice })
+          draggablePlugin.updateLine(change.lineId, { price: Number(change.oldPrice) })
         }
       })
       // Clear pending changes
       setPendingChanges(new Map())
       setTempPrices(new Map())
-      alert('Failed to update order prices. Please try again.')
     }
-  }, [pendingChanges, getOrderByLineId, updateOrder, draggablePlugin])
+  }, [pendingChanges, getOrderByLineId, updateOrder, draggablePlugin, toast])
 
   // Cancel all pending changes
   const cancelPendingChanges = useCallback(() => {
@@ -458,7 +579,7 @@ const FinalTradingChart = () => {
     const change = pendingChanges.get(lineId)
     if (change && draggablePlugin) {
       // Revert the line back to original price
-      draggablePlugin.updateLine(change.lineId, { price: change.oldPrice })
+      draggablePlugin.updateLine(change.lineId, { price: Number(change.oldPrice) })
     }
     
     // Remove from pending changes

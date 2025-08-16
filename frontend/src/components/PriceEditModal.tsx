@@ -18,7 +18,7 @@ const PriceEditModal = ({
   currentPrice,
   symbol
 }: PriceEditModalProps) => {
-  const [newPrice, setNewPrice] = useState(currentPrice.toString())
+  const [newPrice, setNewPrice] = useState(Number(currentPrice).toString())
   const [isUpdating, setIsUpdating] = useState(false)
 
   if (!isOpen) return null
@@ -104,7 +104,7 @@ const PriceEditModal = ({
             <div className="mb-4">
               <p className="text-xs text-muted-foreground">Current Price</p>
               <p className={`text-lg font-mono ${getLineColor(lineType)}`}>
-                ${currentPrice.toFixed(2)}
+                ${Number(currentPrice).toFixed(2)}
               </p>
             </div>
 
