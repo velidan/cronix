@@ -19,7 +19,8 @@ import {
   Target, 
   DollarSign, 
   AlertTriangle,
-  Plus
+  Plus,
+  Activity
 } from 'lucide-react'
 
 const bracketOrderSchema = z.object({
@@ -36,10 +37,13 @@ const bracketOrderSchema = z.object({
 })
 
 const BracketOrderForm = () => {
-  const { currentSymbol } = useTradingStore()
+  const { currentSymbol, chartData } = useTradingStore()
   const { addOrder } = useBracketOrderStore()
   const [showAdvanced, setShowAdvanced] = useState(false)
   const queryClient = useQueryClient()
+  
+  // Get current price from the latest candle
+  const currentPrice = chartData.length > 0 ? chartData[chartData.length - 1].close : 0
 
   const {
     register,
@@ -226,13 +230,23 @@ const BracketOrderForm = () => {
             <label className="block text-xs font-medium text-gray-300 mb-1">
               Entry Price
             </label>
-            <input
-              {...register('entry_price')}
-              type="number"
-              step="0.01"
-              placeholder="45000.00"
-              className="w-full px-2 py-1.5 bg-slate-800 border border-white/10 rounded text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
+            <div className="relative">
+              <input
+                {...register('entry_price')}
+                type="number"
+                step="0.01"
+                placeholder="45000.00"
+                className="w-full px-2 py-1.5 pr-8 bg-slate-800 border border-white/10 rounded text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => setValue('entry_price', currentPrice.toFixed(2))}
+                title="Use current market price"
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-blue-400 transition-colors"
+              >
+                <Activity className="h-3 w-3" />
+              </button>
+            </div>
             {errors.entry_price && (
               <p className="text-red-400 text-xs mt-0.5">{errors.entry_price.message}</p>
             )}
