@@ -13,6 +13,7 @@ import {
 import { bracketOrdersApi } from '../services/bracketOrders'
 import { useTradingStore } from '../store/tradingStore'
 import { useBracketOrderStore } from '../store/bracketOrderStore'
+import PositionSizeCalculator from './PositionSizeCalculator'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -20,7 +21,8 @@ import {
   DollarSign, 
   AlertTriangle,
   Plus,
-  Activity
+  Activity,
+  Calculator
 } from 'lucide-react'
 
 const bracketOrderSchema = z.object({
@@ -40,6 +42,8 @@ const BracketOrderForm = () => {
   const { currentSymbol, chartData } = useTradingStore()
   const { addOrder } = useBracketOrderStore()
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showCalculator, setShowCalculator] = useState(false)
+  const [orderAmount, setOrderAmount] = useState('')
   const queryClient = useQueryClient()
   
   // Get current price from the latest candle
@@ -74,6 +78,48 @@ const BracketOrderForm = () => {
   useEffect(() => {
     setValue('symbol', currentSymbol)
   }, [currentSymbol, setValue])
+
+  // Calculate quantity from order amount
+  useEffect(() => {
+    if (orderAmount) {
+      const amount = parseFloat(orderAmount)
+      if (!isNaN(amount) && amount > 0) {
+        const entryPrice = watchedValues.entry_type === EntryType.LIMIT && watchedValues.entry_price
+          ? parseFloat(watchedValues.entry_price)
+          : currentPrice
+        
+        if (entryPrice > 0) {
+          const quantity = amount / entryPrice
+          setValue('quantity', quantity.toFixed(6))
+        }
+      }
+    }
+  }, [orderAmount, currentPrice, watchedValues.entry_price, watchedValues.entry_type, setValue])
+
+  // Calculate order amount from quantity
+  useEffect(() => {
+    if (watchedValues.quantity) {
+      const quantity = parseFloat(watchedValues.quantity)
+      if (!isNaN(quantity) && quantity > 0) {
+        const entryPrice = watchedValues.entry_type === EntryType.LIMIT && watchedValues.entry_price
+          ? parseFloat(watchedValues.entry_price)
+          : currentPrice
+        
+        if (entryPrice > 0) {
+          const amount = quantity * entryPrice
+          // Don't update if user is typing in order amount field
+          if (document.activeElement?.id !== 'order-amount-input') {
+            setOrderAmount(amount.toFixed(2))
+          }
+        }
+      } else {
+        // Clear order amount if quantity is cleared
+        if (document.activeElement?.id !== 'order-amount-input') {
+          setOrderAmount('')
+        }
+      }
+    }
+  }, [watchedValues.quantity, watchedValues.entry_price, watchedValues.entry_type, currentPrice])
 
   // Create bracket order mutation
   const createOrderMutation = useMutation({
@@ -143,13 +189,24 @@ const BracketOrderForm = () => {
     <div className="bg-slate-900/80 rounded-lg border border-white/10 p-3">
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-sm font-semibold text-white">Bracket Order</h4>
-        <button
-          type="button"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className="text-xs text-blue-400 hover:text-blue-300"
-        >
-          {showAdvanced ? 'Simple' : 'Advanced'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowCalculator(!showCalculator)}
+            className={`text-xs transition-colors ${
+              showCalculator ? 'text-blue-300' : 'text-blue-400 hover:text-blue-300'
+            }`}
+          >
+            <Calculator className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="text-xs text-blue-400 hover:text-blue-300"
+          >
+            {showAdvanced ? 'Simple' : 'Advanced'}
+          </button>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
@@ -207,7 +264,51 @@ const BracketOrderForm = () => {
           </button>
         </div>
 
-        {/* Quantity */}
+        {/* Order Amount Field */}
+        <div>
+          <label className="block text-xs font-medium text-gray-300 mb-1">
+            Order Amount
+          </label>
+          <div className="relative">
+            <DollarSign className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-500" />
+            <input
+              id="order-amount-input"
+              type="number"
+              step="0.01"
+              value={orderAmount}
+              onChange={(e) => {
+                setOrderAmount(e.target.value)
+                // Clear quantity to trigger recalculation
+                if (e.target.value === '') {
+                  setValue('quantity', '')
+                }
+              }}
+              onBlur={() => {
+                // Recalculate quantity when user finishes typing
+                if (orderAmount) {
+                  const amount = parseFloat(orderAmount)
+                  if (!isNaN(amount) && amount > 0) {
+                    const entryPrice = watchedValues.entry_type === EntryType.LIMIT && watchedValues.entry_price
+                      ? parseFloat(watchedValues.entry_price)
+                      : currentPrice
+                    
+                    if (entryPrice > 0) {
+                      const quantity = amount / entryPrice
+                      setValue('quantity', quantity.toFixed(6))
+                    }
+                  }
+                }
+              }}
+              placeholder="100.00"
+              className="w-full pl-7 pr-2 py-1.5 bg-slate-800 border border-white/10 rounded text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Amount of money to invest in this order
+          </p>
+        </div>
+
+        {/* Quantity Field */}
         <div>
           <label className="block text-xs font-medium text-gray-300 mb-1">
             Quantity
@@ -217,12 +318,52 @@ const BracketOrderForm = () => {
             type="number"
             step="0.000001"
             placeholder="0.001"
+            onBlur={(e) => {
+              // Update order amount when quantity changes
+              const quantity = parseFloat(e.target.value)
+              if (!isNaN(quantity) && quantity > 0) {
+                const entryPrice = watchedValues.entry_type === EntryType.LIMIT && watchedValues.entry_price
+                  ? parseFloat(watchedValues.entry_price)
+                  : currentPrice
+                
+                if (entryPrice > 0) {
+                  const amount = quantity * entryPrice
+                  setOrderAmount(amount.toFixed(2))
+                }
+              } else if (e.target.value === '') {
+                setOrderAmount('')
+              }
+            }}
             className="w-full px-2 py-1.5 bg-slate-800 border border-white/10 rounded text-white text-xs placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
           {errors.quantity && (
             <p className="text-red-400 text-xs mt-0.5">{errors.quantity.message}</p>
           )}
+          {watchedValues.quantity && currentPrice > 0 && (
+            <p className="text-xs text-gray-500 mt-0.5">
+              ≈ ${(parseFloat(watchedValues.quantity) * (watchedValues.entry_type === EntryType.LIMIT && watchedValues.entry_price ? parseFloat(watchedValues.entry_price) : currentPrice)).toFixed(2)} value
+            </p>
+          )}
         </div>
+        
+        {/* Position Size Calculator */}
+        {showCalculator && (
+          <PositionSizeCalculator
+            entryPrice={
+              watchedValues.entry_type === EntryType.LIMIT 
+                ? parseFloat(watchedValues.entry_price || '0') || currentPrice
+                : currentPrice
+            }
+            stopLossPrice={parseFloat(watchedValues.stop_loss_price || '0') || undefined}
+            takeProfitPrice={parseFloat(watchedValues.take_profit_1_price || '0') || undefined}
+            side={watchedValues.side}
+            currentQuantity={watchedValues.quantity}
+            onQuantityChange={(quantity) => {
+              setValue('quantity', quantity)
+              setOrderAmount('')  // Clear order amount when calculator sets quantity
+            }}
+          />
+        )}
 
         {/* Entry Price (only for limit orders) */}
         {watchedValues.entry_type === EntryType.LIMIT && (
