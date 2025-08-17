@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -13,7 +13,6 @@ import {
 import { bracketOrdersApi } from '../services/bracketOrders'
 import { useTradingStore } from '../store/tradingStore'
 import { useBracketOrderStore } from '../store/bracketOrderStore'
-import PositionSizeCalculator from './PositionSizeCalculator'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -21,8 +20,7 @@ import {
   DollarSign, 
   AlertTriangle,
   Plus,
-  Activity,
-  Calculator
+  Activity
 } from 'lucide-react'
 
 const bracketOrderSchema = z.object({
@@ -38,11 +36,21 @@ const bracketOrderSchema = z.object({
   take_profit_2_quantity: z.string().optional(),
 })
 
-const BracketOrderForm = () => {
+interface BracketOrderFormProps {
+  onFormChange?: (data: {
+    entryPrice: number
+    stopLossPrice: number | null
+    takeProfitLevels: Array<{ price: number; quantity: number }>
+    quantity: number
+    side: 'buy' | 'sell'
+    entryType: 'market' | 'limit'
+  }) => void
+}
+
+const BracketOrderForm = ({ onFormChange }: BracketOrderFormProps = {}) => {
   const { currentSymbol, chartData } = useTradingStore()
   const { addOrder } = useBracketOrderStore()
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [showCalculator, setShowCalculator] = useState(false)
   const [orderAmount, setOrderAmount] = useState('')
   const queryClient = useQueryClient()
   
@@ -73,6 +81,54 @@ const BracketOrderForm = () => {
   })
 
   const watchedValues = watch()
+
+  // Memoize the form data to prevent infinite loops
+  const formData = useMemo(() => {
+    const takeProfitLevels: Array<{ price: number; quantity: number }> = []
+    
+    if (watchedValues.take_profit_1_price) {
+      takeProfitLevels.push({
+        price: parseFloat(watchedValues.take_profit_1_price) || 0,
+        quantity: parseFloat(watchedValues.take_profit_1_quantity || watchedValues.quantity || '0') || 0
+      })
+    }
+    
+    if (watchedValues.take_profit_2_price) {
+      takeProfitLevels.push({
+        price: parseFloat(watchedValues.take_profit_2_price) || 0,
+        quantity: parseFloat(watchedValues.take_profit_2_quantity || watchedValues.quantity || '0') || 0
+      })
+    }
+    
+    return {
+      entryPrice: watchedValues.entry_type === EntryType.LIMIT && watchedValues.entry_price
+        ? parseFloat(watchedValues.entry_price) || currentPrice
+        : currentPrice,
+      stopLossPrice: watchedValues.stop_loss_price ? parseFloat(watchedValues.stop_loss_price) : null,
+      takeProfitLevels,
+      quantity: parseFloat(watchedValues.quantity || '0') || 0,
+      side: watchedValues.side as 'buy' | 'sell',
+      entryType: watchedValues.entry_type === EntryType.LIMIT ? 'limit' : 'market'
+    }
+  }, [
+    watchedValues.entry_type,
+    watchedValues.entry_price,
+    watchedValues.stop_loss_price,
+    watchedValues.take_profit_1_price,
+    watchedValues.take_profit_1_quantity,
+    watchedValues.take_profit_2_price,
+    watchedValues.take_profit_2_quantity,
+    watchedValues.quantity,
+    watchedValues.side,
+    currentPrice
+  ])
+
+  // Notify parent of form changes
+  useEffect(() => {
+    if (onFormChange) {
+      onFormChange(formData)
+    }
+  }, [formData, onFormChange])
 
   // Update symbol when trading store changes
   useEffect(() => {
@@ -186,30 +242,19 @@ const BracketOrderForm = () => {
   }
 
   return (
-    <div className="bg-slate-900/80 rounded-lg border border-white/10 p-3">
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-semibold text-white">Bracket Order</h4>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setShowCalculator(!showCalculator)}
-            className={`text-xs transition-colors ${
-              showCalculator ? 'text-blue-300' : 'text-blue-400 hover:text-blue-300'
-            }`}
-          >
-            <Calculator className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="text-xs text-blue-400 hover:text-blue-300"
-          >
-            {showAdvanced ? 'Simple' : 'Advanced'}
-          </button>
-        </div>
+    <div className="bg-slate-900/80 rounded-lg border border-white/10 p-2.5">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-semibold text-white">Bracket Order</h4>
+        <button
+          type="button"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="text-xs text-blue-400 hover:text-blue-300"
+        >
+          {showAdvanced ? 'Simple' : 'Advanced'}
+        </button>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
         {/* Order Type Toggle */}
         <div className="grid grid-cols-2 gap-1">
           <button
@@ -345,25 +390,6 @@ const BracketOrderForm = () => {
             </p>
           )}
         </div>
-        
-        {/* Position Size Calculator */}
-        {showCalculator && (
-          <PositionSizeCalculator
-            entryPrice={
-              watchedValues.entry_type === EntryType.LIMIT 
-                ? parseFloat(watchedValues.entry_price || '0') || currentPrice
-                : currentPrice
-            }
-            stopLossPrice={parseFloat(watchedValues.stop_loss_price || '0') || undefined}
-            takeProfitPrice={parseFloat(watchedValues.take_profit_1_price || '0') || undefined}
-            side={watchedValues.side}
-            currentQuantity={watchedValues.quantity}
-            onQuantityChange={(quantity) => {
-              setValue('quantity', quantity)
-              setOrderAmount('')  // Clear order amount when calculator sets quantity
-            }}
-          />
-        )}
 
         {/* Entry Price (only for limit orders) */}
         {watchedValues.entry_type === EntryType.LIMIT && (

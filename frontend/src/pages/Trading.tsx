@@ -5,7 +5,7 @@ import { bracketOrdersApi } from "../services/bracketOrders";
 import { generateDemoChartData, generatePriceUpdate } from "../utils/chartData";
 import FinalTradingChart from "../components/FinalTradingChart";
 import TradingToolbar from "../components/TradingToolbar";
-import BracketOrderForm from "../components/BracketOrderForm";
+import BracketOrderFormWithCalculator from "../components/BracketOrderFormWithCalculator";
 import { useOrderTradingLines } from "../hooks/useOrderTradingLines";
 import { Trash2 } from "lucide-react";
 import { BracketOrder } from "../types/bracketOrder";
@@ -132,9 +132,9 @@ const Trading = () => {
 
   return (
     <div className="space-y-4 flex flex-col flex-1">
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 flex-1">
-        {/* Chart Section - Takes 3/4 of the width */}
-        <div className="xl:col-span-3 space-y-0">
+      <div className="grid grid-cols-1 2xl:grid-cols-3 gap-4 flex-1">
+        {/* Chart Section - Takes 2/3 of the width */}
+        <div className="2xl:col-span-2 space-y-0">
           {/* Trading Toolbar */}
           <TradingToolbar />
 
@@ -142,9 +142,9 @@ const Trading = () => {
           <FinalTradingChart />
         </div>
 
-        {/* Control Panel - Takes 1/4 of the width */}
-        <div className="xl:col-span-1 space-y-4">
-          <BracketOrderForm />
+        {/* Control Panel - Takes 1/3 of the width */}
+        <div className="2xl:col-span-1 space-y-4">
+          <BracketOrderFormWithCalculator />
 
           {/* Active Orders */}
           <div className="bg-slate-900/80 rounded-lg border border-white/10 p-3">

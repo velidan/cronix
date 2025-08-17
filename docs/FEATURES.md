@@ -2,8 +2,17 @@
 
 ## Position Sizing & Risk Management
 
+### Separated Position Calculator Panel
+The position calculator is now displayed as a **separate panel** alongside the bracket order form, providing better visibility and real-time calculations.
+
+**Layout:**
+- Position calculator appears below the bracket order form
+- Both panels are always visible simultaneously
+- Real-time updates as you modify order parameters
+- Clear visual separation for better UX
+
 ### Order Amount Field
-The bracket order form now includes a dedicated **Order Amount** field that allows traders to specify their investment in dollar terms rather than units.
+The bracket order form includes a dedicated **Order Amount** field that allows traders to specify their investment in dollar terms rather than units.
 
 **How it works:**
 - Enter a dollar amount (e.g., $100)
@@ -18,34 +27,65 @@ Order Amount: $100
 Calculated Quantity: 0.0025 BTC
 ```
 
-### Position Size Calculator
+### Position Size Calculator Panel
 
-Advanced risk management tool accessible via the calculator icon in the bracket order form.
+Advanced risk management tool displayed as a dedicated panel alongside the bracket order form.
 
 **Features:**
 1. **Account Balance Management**
    - Set your total trading capital
    - Persistent storage across sessions
+   - Risk amount calculated automatically
 
 2. **Risk Percentage Configuration**
    - Default: 0.25% of account per trade
-   - Presets available:
+   - Quick preset buttons:
      - Conservative: 0.25% (Shield icon)
      - Moderate: 0.5% (Lightning icon)
      - Aggressive: 1.0% (Flame icon)
    - Custom percentages supported
 
-3. **Automatic Position Sizing**
-   - Formula: `Position Size = Risk Amount ÷ Stop Loss Distance`
-   - Ensures maximum loss equals your risk tolerance
-   - Updates in real-time with price changes
+3. **Real-time Position Analysis**
+   - Position value display
+   - Entry price and quantity tracking
+   - Live updates as form values change
 
-4. **Risk/Reward Analysis**
-   - Visual ratio display (1:X format)
+4. **Stop Loss Analysis**
+   - Visual risk status indicator (Conservative/Moderate/Aggressive/Over Limit)
+   - Stop loss dollar amount calculation
+   - Distance from entry in percentage
+   - Warning when risk exceeds limit
+   - Recommended position size for risk amount
+
+5. **Take Profit Analysis**
+   - Individual analysis for each take profit level
+   - Dollar profit amount per level
+   - Distance from entry in percentage
+   - Risk/Reward ratio for each level
+   - Color-coded R:R indicators
+
+6. **Overall Risk/Reward Analysis**
+   - Combined ratio display (1:X format)
+   - Trade quality assessment
    - Color coding:
-     - Green: R/R > 2 (Excellent)
-     - Yellow: R/R > 1 (Good)
-     - Red: R/R < 1 (Poor)
+     - Green: R/R ≥ 2 (Excellent trade setup)
+     - Yellow: R/R ≥ 1 (Acceptable trade setup)
+     - Red: R/R < 1 (Poor risk/reward ratio)
+
+**Visual Indicators:**
+- **Risk Status Icons:**
+  - 🛡️ Shield: Conservative risk level
+  - ⚡ Lightning: Moderate risk level
+  - 🔥 Flame: Aggressive risk level
+  - ⚠️ Warning: Over risk limit
+
+- **Panel Sections:**
+  - Account settings (always visible)
+  - Position information box
+  - Stop loss analysis (red-tinted)
+  - Take profit analysis (green-tinted per level)
+  - Overall R/R summary (blue-tinted)
+  - Warning alerts (orange-tinted)
 
 **Example Calculation:**
 ```
@@ -55,8 +95,13 @@ Entry: $100
 Stop Loss: $95 (5% below)
 Stop Distance: $5
 
+Risk Amount = $10,000 × 0.25% = $25
 Position Size = $25 ÷ $5 = 5 shares
 Maximum Position Value = 5 × $100 = $500
+
+If Take Profit at $110:
+Profit = ($110 - $100) × 5 = $50
+R/R Ratio = $50 ÷ $25 = 2.0 (Excellent)
 ```
 
 ## Toast Notification System
