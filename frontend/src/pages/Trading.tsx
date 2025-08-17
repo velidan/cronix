@@ -18,9 +18,16 @@ const OrderCard = ({ order }: { order: BracketOrder }) => {
     try {
       await bracketOrdersApi.cancel(orderId);
       removeOrder(orderId);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to delete order:", error);
-      alert("Failed to delete order. Please try again.");
+      
+      // If order doesn't exist in backend (404), remove it from local store
+      if (error?.response?.status === 404) {
+        removeOrder(orderId);
+        console.log("Removed stale order from local store:", orderId);
+      } else {
+        alert("Failed to delete order. Please try again.");
+      }
     }
   };
 
@@ -88,18 +95,29 @@ const Trading = () => {
   // Sync orders with trading lines
   useOrderTradingLines();
 
-  // Load orders on mount
+  // Load orders on mount and clear any stale orders
   useEffect(() => {
     const loadOrders = async () => {
       try {
-        const orders = await bracketOrdersApi.getAll();
-        setOrders(orders);
+        const backendOrders = await bracketOrdersApi.getAll();
+        setOrders(backendOrders);
+        
+        // Clear any orders that exist in store but not in backend
+        const backendOrderIds = new Set(backendOrders.map(o => o.id));
+        orders.forEach(order => {
+          if (!backendOrderIds.has(order.id)) {
+            console.log("Removing stale order from store:", order.id);
+            removeOrder(order.id);
+          }
+        });
       } catch (error) {
         console.error("Failed to load orders:", error);
+        // If backend is not available, clear all orders
+        setOrders([]);
       }
     };
     loadOrders();
-  }, [setOrders]);
+  }, []);
 
   // Load chart data when symbol or timeframe changes
   useEffect(() => {

@@ -2,14 +2,18 @@
 
 ## Position Sizing & Risk Management
 
-### Separated Position Calculator Panel
-The position calculator is now displayed as a **separate panel** alongside the bracket order form, providing better visibility and real-time calculations.
+### Integrated Position Calculator Panel
+The position calculator is displayed as a **dedicated panel** alongside the bracket order form in a two-column layout, providing better visibility and real-time calculations.
 
-**Layout:**
-- Position calculator appears below the bracket order form
-- Both panels are always visible simultaneously
-- Real-time updates as you modify order parameters
-- Clear visual separation for better UX
+**Layout Design:**
+- **Trading View**: Chart occupies 2/3 of screen width (2xl:col-span-2)
+- **Control Panel**: Takes 1/3 of width (2xl:col-span-1) containing:
+  - Bracket order form (left column)
+  - Position calculator (right column)
+  - Active orders list (below both)
+- **Side-by-side arrangement**: Both forms visible simultaneously
+- **Consistent styling**: Matching input heights (py-1.5) and text sizes (text-xs)
+- **Responsive breakpoints**: Stacks vertically on smaller screens (< 2xl)
 
 ### Order Amount Field
 The bracket order form includes a dedicated **Order Amount** field that allows traders to specify their investment in dollar terms rather than units.
@@ -180,6 +184,25 @@ Take Profit 1: $42,000 ✅ (Above entry)
 Take Profit 2: $44,000 ✅ (Above TP1)
 ```
 
+## Layout & Space Optimization
+
+### Dynamic Chart Height
+The trading chart automatically adjusts its height to use all available vertical space.
+
+**Implementation:**
+- Minimum height: 600px
+- Dynamic calculation: `window.innerHeight - 300`
+- Responsive to window resize events
+- Flex container with `flex-1` for optimal space usage
+
+### Screen Width Utilization
+The application now uses 95% of screen width instead of the previous max-w-7xl constraint.
+
+**Benefits:**
+- Better use of wide screens
+- More space for chart analysis
+- Improved visibility of multiple panels
+
 ## Quick Actions
 
 ### Current Price Button
@@ -225,16 +248,44 @@ All errors now provide:
 ## Performance Optimizations
 
 1. **Efficient Re-renders**
-   - Memoized calculations
-   - Debounced input handlers
+   - Memoized calculations using `useMemo`
+   - Prevented infinite loops in form change callbacks
    - Optimized useEffect dependencies
+   - Proper null/undefined checks for all calculations
 
 2. **Smart Updates**
    - Batch API calls when possible
    - Local state updates before server confirmation
    - Optimistic UI updates with rollback on error
+   - Debounced form change notifications
 
 3. **Type Safety**
    - Full TypeScript coverage
    - Runtime validation with Zod
    - Type-safe API contracts
+   - Proper handling of optional values
+
+## Technical Implementation Details
+
+### Component Architecture
+```
+BracketOrderFormWithCalculator
+├── BracketOrderForm (left column)
+│   ├── Order type selection
+│   ├── Entry configuration
+│   ├── Risk management inputs
+│   └── Form change callback → onFormChange
+└── PositionCalculatorPanel (right column)
+    ├── Account balance settings
+    ├── Risk percentage configuration
+    ├── Real-time position analysis
+    └── Risk/reward calculations
+```
+
+### Data Flow
+1. User inputs in BracketOrderForm
+2. Form data memoized to prevent re-renders
+3. onFormChange callback updates parent state
+4. PositionCalculatorPanel receives updates via props
+5. Calculator performs real-time risk analysis
+6. Visual feedback updates immediately

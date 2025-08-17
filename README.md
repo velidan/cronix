@@ -14,16 +14,24 @@ A modern trading terminal with KuCoin integration built as a monorepo with FastA
 - **Admin Panel**: Administrative interface for user and system management
 
 ### Risk Management & Position Sizing
+- **Dual-Panel Layout**: Side-by-side bracket order form and position calculator for better visibility
 - **Order Amount Field**: Specify trades in dollar amounts with automatic quantity calculation
-- **Position Size Calculator**: Risk-based position sizing with configurable risk percentage
+- **Live Position Calculator**: Real-time risk analysis displayed alongside order form
 - **Risk Level Presets**: Conservative (0.25%), Moderate (0.5%), Aggressive (1%)
-- **Risk/Reward Analysis**: Real-time calculation with visual indicators
+- **Comprehensive Risk Analysis**: 
+  - Stop loss dollar risk with visual status indicators
+  - Take profit dollar amounts per level
+  - Individual and overall R:R ratios
+  - Trade quality assessment
 - **Smart Validation**: Prevents invalid price configurations before order submission
 
 ### User Experience
+- **Optimized Layout**: Chart takes 2/3 width, controls panel 1/3 for better space utilization
+- **Side-by-Side Forms**: Bracket order and position calculator displayed in two columns
 - **Toast Notifications**: Professional notification system for all actions
 - **Price Validation**: Real-time validation with clear error messages
 - **Quick Actions**: One-click buttons to set current market prices
+- **Dynamic Chart Height**: Automatically adjusts to use available vertical space
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
 - **Persistent Settings**: User preferences saved across sessions
 
