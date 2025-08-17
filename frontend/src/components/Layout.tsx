@@ -1,38 +1,38 @@
-import { ReactNode } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
-import { 
-  BarChart3, 
-  TrendingUp, 
-  Wallet, 
-  Settings, 
+import { ReactNode } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useAuthStore } from "../store/authStore";
+import {
+  BarChart3,
+  TrendingUp,
+  Wallet,
+  Settings,
   LogOut,
-  User
-} from 'lucide-react'
+  User,
+} from "lucide-react";
 
 interface LayoutProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 const Layout = ({ children }: LayoutProps) => {
-  const location = useLocation()
-  const { user, logout } = useAuthStore()
+  const location = useLocation();
+  const { user, logout } = useAuthStore();
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
-    { name: 'Trading', href: '/trading', icon: TrendingUp },
-    { name: 'Portfolio', href: '/portfolio', icon: Wallet },
-  ]
+    { name: "Dashboard", href: "/dashboard", icon: BarChart3 },
+    { name: "Trading", href: "/trading", icon: TrendingUp },
+    { name: "Portfolio", href: "/portfolio", icon: Wallet },
+  ];
 
-  if (user?.role === 'admin') {
-    navigation.push({ name: 'Admin', href: '/admin', icon: Settings })
+  if (user?.role === "admin") {
+    navigation.push({ name: "Admin", href: "/admin", icon: Settings });
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Navigation */}
       <nav className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-[95%] mx-auto px-4">
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
@@ -40,21 +40,21 @@ const Layout = ({ children }: LayoutProps) => {
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 {navigation.map((item) => {
-                  const Icon = item.icon
+                  const Icon = item.icon;
                   return (
                     <Link
                       key={item.name}
                       to={item.href}
                       className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
                         location.pathname === item.href
-                          ? 'border-primary text-primary'
-                          : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                          ? "border-primary text-primary"
+                          : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
                       }`}
                     >
                       <Icon className="mr-2 h-4 w-4" />
                       {item.name}
                     </Link>
-                  )
+                  );
                 })}
               </div>
             </div>
@@ -79,13 +79,11 @@ const Layout = ({ children }: LayoutProps) => {
       </nav>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {children}
-        </div>
+      <main className="w-[95%] mx-auto py-4 flex flex-1">
+        <div className="px-4 flex flex-col flex-1">{children}</div>
       </main>
     </div>
-  )
-}
+  );
+};
 
-export default Layout
+export default Layout;

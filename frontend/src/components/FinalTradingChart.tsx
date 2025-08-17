@@ -183,6 +183,7 @@ const FinalTradingChart = () => {
     }
 
     let mounted = true
+    let resizeHandler: (() => void) | null = null
     
     const initChart = async () => {
       try {
@@ -203,8 +204,9 @@ const FinalTradingChart = () => {
         // Get container dimensions
         const rect = chartContainer.getBoundingClientRect()
         const width = Math.max(rect.width, 600) // Minimum 600px width
+        const chartHeight = Math.max(600, window.innerHeight - 300) // Minimum 600px, dynamic height
         
-        console.log('Creating chart with dimensions:', { width, height: 400 })
+        console.log('Creating chart with dimensions:', { width, height: chartHeight })
         
         // Create the chart
         const chart = createChart(chartContainer, {
@@ -228,8 +230,18 @@ const FinalTradingChart = () => {
             secondsVisible: false,
           },
           width: width,
-          height: 350,
+          height: chartHeight,
         })
+        
+        // Handle window resize
+        resizeHandler = () => {
+          const newHeight = Math.max(600, window.innerHeight - 300)
+          chart.applyOptions({ 
+            width: chartContainer.offsetWidth,
+            height: newHeight 
+          })
+        }
+        window.addEventListener('resize', resizeHandler)
 
         // Add candlestick series
         const series = chart.addCandlestickSeries({
@@ -263,6 +275,10 @@ const FinalTradingChart = () => {
     return () => {
       mounted = false
       clearTimeout(timer)
+      // Remove the resize event listener if it exists
+      if (resizeHandler) {
+        window.removeEventListener('resize', resizeHandler)
+      }
       if (draggablePlugin) {
         try {
           draggablePlugin.destroy()
@@ -663,7 +679,7 @@ const FinalTradingChart = () => {
   }
 
   return (
-    <div className="bg-slate-900/80 rounded-lg border border-white/10 p-3">
+    <div className="bg-slate-900/80 rounded-lg border border-white/10 p-3 flex flex-col flex-1">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-semibold text-white">
@@ -685,11 +701,10 @@ const FinalTradingChart = () => {
       </div>
 
       {/* Chart Container */}
-      <div className="bg-slate-800 rounded border border-white/10 relative p-1">
+      <div className="bg-slate-800 rounded border border-white/10 relative p-1 flex-1 flex flex-col">
         <div 
           ref={chartContainerRef}
-          className="w-full bg-slate-900 rounded"
-          style={{ height: '350px', minHeight: '350px' }}
+          className="w-full flex-1 min-h-[600px] bg-slate-900 rounded"
         />
         
         {/* Status overlay */}

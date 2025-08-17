@@ -1,36 +1,38 @@
-import { useEffect } from 'react'
-import { useTradingStore } from '../store/tradingStore'
-import { useBracketOrderStore } from '../store/bracketOrderStore'
-import { bracketOrdersApi } from '../services/bracketOrders'
-import { generateDemoChartData, generatePriceUpdate } from '../utils/chartData'
-import FinalTradingChart from '../components/FinalTradingChart'
-import TradingToolbar from '../components/TradingToolbar'
-import BracketOrderForm from '../components/BracketOrderForm'
-import { useOrderTradingLines } from '../hooks/useOrderTradingLines'
-import { Trash2 } from 'lucide-react'
-import { BracketOrder } from '../types/bracketOrder'
+import { useEffect } from "react";
+import { useTradingStore } from "../store/tradingStore";
+import { useBracketOrderStore } from "../store/bracketOrderStore";
+import { bracketOrdersApi } from "../services/bracketOrders";
+import { generateDemoChartData, generatePriceUpdate } from "../utils/chartData";
+import FinalTradingChart from "../components/FinalTradingChart";
+import TradingToolbar from "../components/TradingToolbar";
+import BracketOrderForm from "../components/BracketOrderForm";
+import { useOrderTradingLines } from "../hooks/useOrderTradingLines";
+import { Trash2 } from "lucide-react";
+import { BracketOrder } from "../types/bracketOrder";
 
 // OrderCard Component
 const OrderCard = ({ order }: { order: BracketOrder }) => {
-  const { removeOrder } = useBracketOrderStore()
-  
+  const { removeOrder } = useBracketOrderStore();
+
   const handleDeleteOrder = async (orderId: string) => {
     try {
-      await bracketOrdersApi.cancel(orderId)
-      removeOrder(orderId)
+      await bracketOrdersApi.cancel(orderId);
+      removeOrder(orderId);
     } catch (error) {
-      console.error('Failed to delete order:', error)
-      alert('Failed to delete order. Please try again.')
+      console.error("Failed to delete order:", error);
+      alert("Failed to delete order. Please try again.");
     }
-  }
+  };
 
   return (
     <div className="p-2 bg-slate-800/50 rounded border border-white/5">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-medium ${
-            order.side === 'buy' ? 'text-green-400' : 'text-red-400'
-          }`}>
+          <span
+            className={`text-xs font-medium ${
+              order.side === "buy" ? "text-green-400" : "text-red-400"
+            }`}
+          >
             {order.side.toUpperCase()}
           </span>
           <span className="text-xs text-gray-400">{order.symbol}</span>
@@ -58,97 +60,97 @@ const OrderCard = ({ order }: { order: BracketOrder }) => {
           </div>
         )}
         {order.take_profit_levels?.map((tp, index) => (
-          <div key={index} className="flex items-center justify-between text-gray-500">
+          <div
+            key={index}
+            className="flex items-center justify-between text-gray-500"
+          >
             <span>TP{index + 1}:</span>
             <span>${Number(tp.price).toFixed(2)}</span>
           </div>
         ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
 const Trading = () => {
-  const { 
-    currentSymbol, 
-    currentTimeframe, 
+  const {
+    currentSymbol,
+    currentTimeframe,
     chartData,
-    setChartData, 
+    setChartData,
     updateLastCandle,
-    setLoading 
-  } = useTradingStore()
+    setLoading,
+  } = useTradingStore();
 
-  const { orders, setOrders, removeOrder } = useBracketOrderStore()
+  const { orders, setOrders, removeOrder } = useBracketOrderStore();
 
   // Sync orders with trading lines
-  useOrderTradingLines()
+  useOrderTradingLines();
 
   // Load orders on mount
   useEffect(() => {
     const loadOrders = async () => {
       try {
-        const orders = await bracketOrdersApi.getAll()
-        setOrders(orders)
+        const orders = await bracketOrdersApi.getAll();
+        setOrders(orders);
       } catch (error) {
-        console.error('Failed to load orders:', error)
+        console.error("Failed to load orders:", error);
       }
-    }
-    loadOrders()
-  }, [setOrders])
+    };
+    loadOrders();
+  }, [setOrders]);
 
   // Load chart data when symbol or timeframe changes
   useEffect(() => {
-    setLoading(true)
-    
+    setLoading(true);
+
     // Simulate API call delay
     const loadData = async () => {
-      await new Promise(resolve => setTimeout(resolve, 500))
-      const data = generateDemoChartData(currentSymbol, currentTimeframe, 200)
-      setChartData(data)
-    }
-    
-    loadData()
-  }, [currentSymbol, currentTimeframe, setChartData, setLoading])
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const data = generateDemoChartData(currentSymbol, currentTimeframe, 200);
+      setChartData(data);
+    };
+
+    loadData();
+  }, [currentSymbol, currentTimeframe, setChartData, setLoading]);
 
   // Simulate real-time price updates
   useEffect(() => {
-    if (chartData.length === 0) return
+    if (chartData.length === 0) return;
 
     const interval = setInterval(() => {
-      const lastCandle = chartData[chartData.length - 1]
+      const lastCandle = chartData[chartData.length - 1];
       if (lastCandle) {
-        const updatedCandle = generatePriceUpdate(lastCandle, currentSymbol)
-        updateLastCandle(updatedCandle)
+        const updatedCandle = generatePriceUpdate(lastCandle, currentSymbol);
+        updateLastCandle(updatedCandle);
       }
-    }, 2000) // Update every 2 seconds
+    }, 2000); // Update every 2 seconds
 
-    return () => clearInterval(interval)
-  }, [chartData, currentSymbol, updateLastCandle])
+    return () => clearInterval(interval);
+  }, [chartData, currentSymbol, updateLastCandle]);
 
   return (
-    <div className="space-y-4">
-      <div className="px-3 py-2">
-        <h1 className="text-xl font-bold text-white">Trading Terminal</h1>
-        <p className="text-xs text-gray-400">Advanced charting with trading lines</p>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+    <div className="space-y-4 flex flex-col flex-1">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 flex-1">
         {/* Chart Section - Takes 3/4 of the width */}
         <div className="xl:col-span-3 space-y-0">
           {/* Trading Toolbar */}
           <TradingToolbar />
-          
+
           {/* Chart Widget */}
           <FinalTradingChart />
         </div>
-        
+
         {/* Control Panel - Takes 1/4 of the width */}
         <div className="xl:col-span-1 space-y-4">
           <BracketOrderForm />
-          
+
           {/* Active Orders */}
           <div className="bg-slate-900/80 rounded-lg border border-white/10 p-3">
-            <h4 className="text-sm font-semibold text-white mb-3">Active Orders</h4>
+            <h4 className="text-sm font-semibold text-white mb-3">
+              Active Orders
+            </h4>
             {orders.length > 0 ? (
               <div className="space-y-2">
                 {orders.map((order) => (
@@ -156,13 +158,15 @@ const Trading = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-gray-500 text-center py-4">No active orders</p>
+              <p className="text-xs text-gray-500 text-center py-4">
+                No active orders
+              </p>
             )}
           </div>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Trading
+export default Trading;

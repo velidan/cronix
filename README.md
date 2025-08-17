@@ -4,12 +4,28 @@ A modern trading terminal with KuCoin integration built as a monorepo with FastA
 
 ## 🚀 Features
 
+### Core Trading Features
 - **Real-time Trading**: Live price feeds and order management via WebSocket
 - **KuCoin Integration**: Official KuCoin Universal SDK for secure trading
+- **Bracket Orders**: Advanced order types with stop loss and take profit levels
+- **Draggable Price Lines**: Interactive chart with drag-and-drop price adjustments
 - **Modern UI**: Dark-themed React interface with Tailwind CSS
 - **Authentication**: JWT-based secure authentication system
 - **Admin Panel**: Administrative interface for user and system management
-- **Responsive Design**: Works on desktop and mobile devices
+
+### Risk Management & Position Sizing
+- **Order Amount Field**: Specify trades in dollar amounts with automatic quantity calculation
+- **Position Size Calculator**: Risk-based position sizing with configurable risk percentage
+- **Risk Level Presets**: Conservative (0.25%), Moderate (0.5%), Aggressive (1%)
+- **Risk/Reward Analysis**: Real-time calculation with visual indicators
+- **Smart Validation**: Prevents invalid price configurations before order submission
+
+### User Experience
+- **Toast Notifications**: Professional notification system for all actions
+- **Price Validation**: Real-time validation with clear error messages
+- **Quick Actions**: One-click buttons to set current market prices
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Persistent Settings**: User preferences saved across sessions
 
 ## 🏗️ Architecture
 
@@ -48,9 +64,12 @@ cronix/
 - **TypeScript** - Type safety
 - **Vite** - Build tool and dev server
 - **Tailwind CSS** - Styling
-- **Zustand** - State management
+- **Zustand** - State management with persistence
 - **TanStack Query** - Server state management
-- **React Hook Form** - Form handling
+- **React Hook Form + Zod** - Form handling with validation
+- **Lightweight Charts** - Professional trading charts
+- **Framer Motion** - Smooth animations
+- **Lucide React** - Icon system
 
 ### Infrastructure
 - **Docker Compose** - Development environment
